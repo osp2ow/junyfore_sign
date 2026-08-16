@@ -509,7 +509,15 @@ function priceOptionsFor(enrollType) {
   if (enrollType === "그룹") return [
     { key: "1개월(4회)", price: 100000, note: "1인당" },
   ];
+  if (enrollType === "전문") return [
+    { key: "1개월(4회)", price: 220000 },
+  ];
   return [];
+}
+
+function enrollTypeOptionsFor(instrument) {
+  if (instrument === "작곡(미디)") return ["전문", "입시"];
+  return ["취미", "입시", "그룹", "전문"];
 }
 
 function formatKRW(n) {
@@ -1381,7 +1389,13 @@ function App() {
           h("label", null, "등록 악기"),
           h("div", { className: "pill-group" },
             ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
-              return h(Pill, { key: i, selected: form.instrument===i, onClick: function(){ set("instrument", i); } }, i);
+              return h(Pill, { key: i, selected: form.instrument===i, onClick: function(){
+                set("instrument", i);
+                if (enrollTypeOptionsFor(i).indexOf(form.enrollType) === -1) {
+                  set("enrollType", "");
+                  set("duration", "");
+                }
+              } }, i);
             })
           )
         ),
@@ -1389,7 +1403,7 @@ function App() {
         h("div", { className: "field" },
           h("label", null, "등록 유형"),
           h("div", { className: "block-group" },
-            ["취미", "입시", "그룹"].map(function (t) {
+            enrollTypeOptionsFor(form.instrument).map(function (t) {
               return h(Pill, { key: t, wide: true, selected: form.enrollType===t, onClick: function(){
                 set("enrollType", t);
                 set("duration", "");
@@ -1462,11 +1476,18 @@ function App() {
                 ),
                 h("div", { className: "pill-group", style: { marginBottom: "10px" } },
                   ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
-                    return h(Pill, { key: i, selected: s.instrument===i, onClick: function(){ updateSubject(idx, { instrument: i }); } }, i);
+                    return h(Pill, { key: i, selected: s.instrument===i, onClick: function(){
+                      var patch = { instrument: i };
+                      if (enrollTypeOptionsFor(i).indexOf(s.enrollType) === -1) {
+                        patch.enrollType = "";
+                        patch.duration = "";
+                      }
+                      updateSubject(idx, patch);
+                    } }, i);
                   })
                 ),
                 h("div", { className: "block-group", style: { marginBottom: "10px" } },
-                  ["취미", "입시", "그룹"].map(function (t) {
+                  enrollTypeOptionsFor(s.instrument).map(function (t) {
                     return h(Pill, { key: t, wide: true, selected: s.enrollType===t, onClick: function(){ updateSubject(idx, { enrollType: t, duration: "" }); } }, t);
                   })
                 ),
