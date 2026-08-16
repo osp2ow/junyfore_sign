@@ -779,6 +779,7 @@ function App() {
   var listErrorState = useState(""); var listError = listErrorState[0], setListError = listErrorState[1];
   var searchNameState = useState(""); var searchName = searchNameState[0], setSearchName = searchNameState[1];
   var sortModeState = useState("date"); var sortMode = sortModeState[0], setSortMode = sortModeState[1];
+  var adminTabState = useState("list"); var adminTab = adminTabState[0], setAdminTab = adminTabState[1];
   var expandedIdState = useState(null); var expandedId = expandedIdState[0], setExpandedId = expandedIdState[1];
   var pdfRecordState = useState(null); var pdfRecord = pdfRecordState[0], setPdfRecord = pdfRecordState[1];
   var downloadingIdState = useState(null); var downloadingId = downloadingIdState[0], setDownloadingId = downloadingIdState[1];
@@ -1123,7 +1124,10 @@ function App() {
 
   if (mode === "adminList") {
     var filteredEnrollments = enrollments.filter(function (e) {
-      return !searchName || (e.name && e.name.indexOf(searchName) !== -1);
+      if (!searchName) return true;
+      return (e.name && e.name.indexOf(searchName) !== -1) ||
+        (e.fatherName && e.fatherName.indexOf(searchName) !== -1) ||
+        (e.motherName && e.motherName.indexOf(searchName) !== -1);
     });
     var sortedEnrollments = filteredEnrollments.slice().sort(function (a, b) {
       if (sortMode === "name") return (a.name || "").localeCompare(b.name || "", "ko");
@@ -1131,14 +1135,39 @@ function App() {
       var tb = (b.createdAt && b.createdAt.toDate) ? b.createdAt.toDate().getTime() : new Date(b.regDate || 0).getTime();
       return tb - ta;
     });
+    var SOURCE_LIST = ["네이버 검색", "지인", "블로그", "인스타", "기타"];
+    var sourceCounts = SOURCE_LIST.map(function (s) {
+      return { label: s, count: enrollments.filter(function (e) { return e.source === s; }).length };
+    });
+    var maxSourceCount = Math.max(1, sourceCounts.reduce(function (m, c) { return Math.max(m, c.count); }, 0));
     return h("div", { className: "shell" },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" } },
         h("div", { className: "brand", style: { fontFamily: "'Black Han Sans', sans-serif", fontSize: "22px", color: "var(--juniper-deep)" } }, "등록 원서 목록"),
         h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: handleAdminLogout }, "로그아웃")
       ),
-      h("div", { className: "card" },
+      h("div", { className: "pill-group", style: { marginBottom: "16px" } },
+        h(Pill, { selected: adminTab==="list", onClick: function(){ setAdminTab("list"); } }, "목록"),
+        h(Pill, { selected: adminTab==="stats", onClick: function(){ setAdminTab("stats"); } }, "유입 경로 통계")
+      ),
+      adminTab === "stats" ? h("div", { className: "card" },
+        h("div", { className: "section-title" }, "유입 경로 통계"),
+        h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "18px" } }, "전체 " + enrollments.length + "건 기준"),
+        listLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "불러오는 중…") : null,
+        sourceCounts.map(function (c) {
+          return h("div", { key: c.label, style: { marginBottom: "16px" } },
+            h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "13.5px", marginBottom: "6px" } },
+              h("span", { style: { fontWeight: 600 } }, c.label),
+              h("span", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, c.count + "건")
+            ),
+            h("div", { style: { height: "16px", background: "#EFEAE0", borderRadius: "8px", overflow: "hidden" } },
+              h("div", { style: { height: "100%", width: (c.count / maxSourceCount * 100) + "%", background: "linear-gradient(90deg, var(--juniper-mid), var(--juniper-deep))", borderRadius: "8px" } })
+            )
+          );
+        })
+      ) : null,
+      adminTab === "list" ? h("div", { className: "card" },
         h("div", { className: "row2", style: { marginBottom: "14px" } },
-          h("input", { type: "text", placeholder: "이름으로 검색", value: searchName, onChange: function(e){ setSearchName(e.target.value); } })
+          h("input", { type: "text", placeholder: "이름 또는 보호자 성함으로 검색", value: searchName, onChange: function(e){ setSearchName(e.target.value); } })
         ),
         h("div", { className: "pill-group", style: { marginBottom: "14px" } },
           h(Pill, { selected: sortMode==="date", onClick: function(){ setSortMode("date"); } }, "최신순"),
@@ -1187,7 +1216,7 @@ function App() {
             ) : null
           );
         })
-      ),
+      ) : null,
       h("div", { className: "nav-row" },
         h("button", { type: "button", className: "btn ghost", onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
       ),
