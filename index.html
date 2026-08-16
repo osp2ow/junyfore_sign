@@ -20,6 +20,7 @@
 <!-- Firebase (compat SDK — simplest for a single static file) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <!-- PDF 생성 (등록 완료 후 PDF 저장 / 카카오톡·문자 공유용) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -443,11 +444,16 @@ var firebaseConfig = {
 };
 var FIREBASE_CONFIGURED = firebaseConfig.apiKey !== "YOUR_API_KEY";
 var COLLECTION_NAME = "enrollments"; // Firestore 컬렉션 이름
+// Firebase Auth는 이메일 형식만 지원해서, 관리자가 입력한 아이디 뒤에
+// 이 도메인을 붙여 내부적으로만 이메일처럼 사용합니다 (화면엔 아이디만 보여요).
+var ADMIN_ID_DOMAIN = "@junyfore-sign.local";
 
 var db = null;
+var auth = null;
 if (FIREBASE_CONFIGURED) {
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  auth = firebase.auth();
 }
 
 /* =========================================================================
@@ -694,6 +700,73 @@ function App() {
   var printRef = useRef(null);
   var pdfBusyState = useState(false); var pdfBusy = pdfBusyState[0], setPdfBusy = pdfBusyState[1];
 
+  // ----- 관리자 모드 -----
+  var modeState = useState(window.location.hash === "#admin" ? "adminLogin" : "form"); var mode = modeState[0], setMode = modeState[1];
+  var authUserState = useState(null); var authUser = authUserState[0], setAuthUser = authUserState[1];
+  var authCheckedState = useState(false); var authChecked = authCheckedState[0], setAuthChecked = authCheckedState[1];
+  var loginEmailState = useState(""); var loginEmail = loginEmailState[0], setLoginEmail = loginEmailState[1];
+  var loginPasswordState = useState(""); var loginPassword = loginPasswordState[0], setLoginPassword = loginPasswordState[1];
+  var loginErrorState = useState(""); var loginError = loginErrorState[0], setLoginError = loginErrorState[1];
+  var loginBusyState = useState(false); var loginBusy = loginBusyState[0], setLoginBusy = loginBusyState[1];
+  var enrollmentsState = useState([]); var enrollments = enrollmentsState[0], setEnrollments = enrollmentsState[1];
+  var listLoadingState = useState(false); var listLoading = listLoadingState[0], setListLoading = listLoadingState[1];
+  var listErrorState = useState(""); var listError = listErrorState[0], setListError = listErrorState[1];
+  var searchNameState = useState(""); var searchName = searchNameState[0], setSearchName = searchNameState[1];
+  var sortModeState = useState("date"); var sortMode = sortModeState[0], setSortMode = sortModeState[1];
+  var expandedIdState = useState(null); var expandedId = expandedIdState[0], setExpandedId = expandedIdState[1];
+
+  useEffect(function () {
+    if (!auth) { setAuthChecked(true); return; }
+    var unsub = auth.onAuthStateChanged(function (u) {
+      setAuthUser(u);
+      setAuthChecked(true);
+      if (u && mode === "adminLogin") setMode("adminList");
+    });
+    return unsub;
+  }, []);
+
+  useEffect(function () {
+    if (mode !== "adminList" || !authUser || !db) return;
+    setListLoading(true);
+    setListError("");
+    db.collection(COLLECTION_NAME).orderBy("createdAt", "desc").get().then(function (snap) {
+      var list = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      setEnrollments(list);
+    }).catch(function (e) {
+      console.error(e);
+      setListError("목록을 불러오지 못했습니다: " + e.message);
+    }).finally(function () {
+      setListLoading(false);
+    });
+  }, [mode, authUser]);
+
+  function openAdmin() {
+    setMode("adminLogin");
+    setLoginError("");
+  }
+
+  function handleAdminLogin() {
+    if (!auth) { setLoginError("Firebase 설정이 필요합니다."); return; }
+    setLoginBusy(true);
+    setLoginError("");
+    var email = loginEmail.indexOf("@") !== -1 ? loginEmail : (loginEmail + ADMIN_ID_DOMAIN);
+    auth.signInWithEmailAndPassword(email, loginPassword).then(function () {
+      setMode("adminList");
+      setLoginPassword("");
+    }).catch(function (e) {
+      setLoginError("로그인 실패: 아이디 또는 비밀번호를 확인해 주세요.");
+    }).finally(function () {
+      setLoginBusy(false);
+    });
+  }
+
+  function handleAdminLogout() {
+    if (auth) auth.signOut();
+    setMode("form");
+    setEnrollments([]);
+    setExpandedId(null);
+  }
+
   function set(key, value) {
     setForm(function (f) {
       var next = Object.assign({}, f);
@@ -922,6 +995,98 @@ function App() {
     }).finally(function () {
       setPdfBusy(false);
     });
+  }
+
+  if (mode === "adminLogin") {
+    return h("div", { className: "shell" },
+      h("div", { className: "header" },
+        h("div", { className: "brand" }, "주니퍼 실용음악학원"),
+        h("div", { className: "doc-title" }, "관 리 자")
+      ),
+      h("div", { className: "staff" }),
+      loginError ? h("div", { className: "error-banner" }, loginError) : null,
+      h("div", { className: "card" },
+        h("div", { className: "section-title" }, "관리자 로그인"),
+        h("div", { className: "field" },
+          h("label", null, "아이디"),
+          h("input", { type: "text", autoCapitalize: "off", autoCorrect: "off", value: loginEmail, onChange: function(e){ setLoginEmail(e.target.value); } })
+        ),
+        h("div", { className: "field" },
+          h("label", null, "비밀번호"),
+          h("input", { type: "password", value: loginPassword, onChange: function(e){ setLoginPassword(e.target.value); }, onKeyDown: function(e){ if (e.key === "Enter") handleAdminLogin(); } })
+        ),
+        h("div", { className: "nav-row" },
+          h("button", { type: "button", className: "btn ghost", onClick: function(){ setMode("form"); } }, "← 등록 원서로"),
+          h("button", { type: "button", className: "btn primary", disabled: loginBusy, onClick: handleAdminLogin }, loginBusy ? "로그인 중…" : "로그인")
+        )
+      )
+    );
+  }
+
+  if (mode === "adminList") {
+    var filteredEnrollments = enrollments.filter(function (e) {
+      return !searchName || (e.name && e.name.indexOf(searchName) !== -1);
+    });
+    var sortedEnrollments = filteredEnrollments.slice().sort(function (a, b) {
+      if (sortMode === "name") return (a.name || "").localeCompare(b.name || "", "ko");
+      var ta = (a.createdAt && a.createdAt.toDate) ? a.createdAt.toDate().getTime() : new Date(a.regDate || 0).getTime();
+      var tb = (b.createdAt && b.createdAt.toDate) ? b.createdAt.toDate().getTime() : new Date(b.regDate || 0).getTime();
+      return tb - ta;
+    });
+    return h("div", { className: "shell" },
+      h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" } },
+        h("div", { className: "brand", style: { fontFamily: "'Song Myung', serif", fontSize: "22px", color: "var(--juniper-deep)" } }, "등록 원서 목록"),
+        h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: handleAdminLogout }, "로그아웃")
+      ),
+      h("div", { className: "card" },
+        h("div", { className: "row2", style: { marginBottom: "14px" } },
+          h("input", { type: "text", placeholder: "이름으로 검색", value: searchName, onChange: function(e){ setSearchName(e.target.value); } })
+        ),
+        h("div", { className: "pill-group", style: { marginBottom: "14px" } },
+          h(Pill, { selected: sortMode==="date", onClick: function(){ setSortMode("date"); } }, "최신순"),
+          h(Pill, { selected: sortMode==="name", onClick: function(){ setSortMode("name"); } }, "이름순")
+        ),
+        listLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "불러오는 중…") : null,
+        listError ? h("div", { className: "error-banner" }, listError) : null,
+        (!listLoading && sortedEnrollments.length === 0) ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "등록된 원서가 없습니다.") : null,
+        !listLoading && sortedEnrollments.length > 0 ? h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "8px" } }, "총 " + sortedEnrollments.length + "건") : null,
+        sortedEnrollments.map(function (rec) {
+          var isExpanded = expandedId === rec.id;
+          var dateLabel = (rec.createdAt && rec.createdAt.toDate) ? rec.createdAt.toDate().toLocaleString("ko-KR") : rec.regDate;
+          var subjectLabel = (rec.discountType === "두과목 이상 할인" && rec.subjects && rec.subjects.length)
+            ? rec.subjects.map(function (s) { return s.instrument + "(" + s.enrollType + ")"; }).join(", ")
+            : ((rec.instrument || "-") + " · " + (rec.enrollType || "-") + " · " + (rec.duration || "-"));
+          return h("div", { key: rec.id, style: { border: "1px solid var(--rule)", borderRadius: "12px", padding: "12px 14px", marginBottom: "10px", cursor: "pointer" }, onClick: function(){ setExpandedId(isExpanded ? null : rec.id); } },
+            h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" } },
+              h("div", null,
+                h("div", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, rec.name || "(이름 없음)"),
+                h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)", marginTop: "2px" } }, subjectLabel)
+              ),
+              h("div", { style: { textAlign: "right", flex: "0 0 auto" } },
+                h("div", { style: { fontSize: "12px", color: "var(--ink-soft)" } }, dateLabel),
+                h("div", { style: { fontWeight: 700, marginTop: "2px" } }, (rec.price !== undefined && rec.price !== null && rec.price !== "") ? formatKRW(rec.price) : "-")
+              )
+            ),
+            isExpanded ? h("div", { style: { marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--rule)" } },
+              summaryRow("성별", rec.gender),
+              summaryRow("주소", ((rec.address || "") + " " + (rec.addressDetail || "")).trim()),
+              summaryRow("본인 핸드폰", rec.studentPhone),
+              rec.parentPhone ? summaryRow("부모님 핸드폰" + (rec.parentPhoneOwner ? " (" + rec.parentPhoneOwner + ")" : ""), rec.parentPhone) : null,
+              (rec.fatherName || rec.motherName) ? summaryRow("보호자 성함", [rec.fatherName ? "아버지 " + rec.fatherName : "", rec.motherName ? "어머니 " + rec.motherName : ""].filter(Boolean).join(" / ")) : null,
+              summaryRow("유입 경로", rec.source === "기타" ? ("기타 - " + rec.sourceEtc) : rec.source),
+              rec.discountType ? summaryRow("할인 유형", rec.discountType) : null,
+              rec.signature ? h("div", { style: { marginTop: "10px" } },
+                h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" } }, "서명"),
+                h("img", { src: rec.signature, style: { height: "50px" } })
+              ) : null
+            ) : null
+          );
+        })
+      ),
+      h("div", { className: "nav-row" },
+        h("button", { type: "button", className: "btn ghost", onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
+      )
+    );
   }
 
   if (submitted) {
@@ -1244,6 +1409,9 @@ function App() {
       h("div", { className: "card" },
         part === 1 ? renderPart1() : null,
         part === 2 ? renderPart2() : null
+      ),
+      h("div", { style: { textAlign: "center", marginTop: "18px" } },
+        h("button", { type: "button", onClick: openAdmin, style: { background: "none", border: "none", color: "var(--ink-soft)", fontSize: "12px", cursor: "pointer", textDecoration: "underline" } }, "학원 관리자이신가요? 등록 목록 보기")
       )
     ),
     addressModalOpen ? h("div", { className: "addr-modal-backdrop", onClick: function(){ setAddressModalOpen(false); } },
