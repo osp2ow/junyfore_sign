@@ -164,6 +164,8 @@
   }
   input[type="text"], input[type="tel"], input[type="date"], input[type="password"], input[type="email"]{
     width:100%;
+    min-width:0;
+    box-sizing:border-box;
     padding: 14px 14px;
     font-size: 16px;
     border-radius: 12px;
@@ -172,13 +174,17 @@
     color:var(--ink);
     font-family:inherit;
   }
+  input[type="date"]{
+    -webkit-appearance: none;
+    appearance: none;
+  }
   input:focus{
     outline: none;
     border-color: var(--juniper-mid);
     box-shadow: 0 0 0 3px rgba(74,107,82,0.15);
   }
   .row2{ display:flex; gap:12px; }
-  .row2 > div{ flex:1; }
+  .row2 > div{ flex:1; min-width:0; }
 
   .pill-group{ display:flex; flex-wrap:wrap; gap:10px; }
   .pill{
@@ -1251,7 +1257,7 @@ function App() {
       h("div", { className: "field" },
         h("label", null, "주소"),
         h("div", { className: "row2", style: { marginBottom: "10px" } },
-          h("input", { type: "text", placeholder: "주소를 입력하거나 오른쪽 '주소 검색'을 눌러주세요", value: form.address, onChange: function(e){ set("address", e.target.value); } })
+          h("input", { type: "text", placeholder: "주소를 입력하거나 오른쪽 '주소 검색'을 눌러주세요", value: form.address, onClick: openAddressSearch, onChange: function(e){ set("address", e.target.value); } })
         ),
         h("div", { className: "row2" },
           h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 120px" }, onClick: openAddressSearch }, "주소 검색"),
