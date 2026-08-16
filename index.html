@@ -588,6 +588,7 @@ function buildSummaryTree(data) {
           summaryRow("등록 유형", data.enrollType),
           summaryRow("등록 기간", data.duration),
           data.discountType ? summaryRow("할인 유형", data.discountType) : null,
+          (data.discountType === "가족할인" && data.familyMemberName) ? summaryRow("가족 관계 수강생", data.familyMemberName) : null,
           summaryRow("최종 결제 금액", (data.price !== undefined && data.price !== null && data.price !== "") ? formatKRW(data.price) : "-")
         ),
     summaryDivider(),
@@ -770,6 +771,7 @@ function emptyForm() {
     enrollType: "",
     duration: "",
     discountType: "",
+    familyMemberName: "",
     subjects: [],
     rulesChecked: ACADEMY_RULES.map(function(){ return false; }),
     refundChecked: false,
@@ -1018,6 +1020,7 @@ function App() {
       if (!form.enrollType) return "등록 유형을 선택해 주세요.";
       if (!form.duration) return "등록 기간을 선택해 주세요.";
     }
+    if (form.discountType === "가족할인" && !form.familyMemberName.trim()) return "가족할인 대상 수강생 이름을 입력해 주세요.";
     for (var j = 0; j < form.rulesChecked.length; j++) {
       if (!form.rulesChecked[j]) return "학원 원칙 항목에 모두 동의해 주세요.";
     }
@@ -1238,6 +1241,7 @@ function App() {
               (rec.fatherName || rec.motherName) ? summaryRow("보호자 성함", [rec.fatherName ? "아버지 " + rec.fatherName : "", rec.motherName ? "어머니 " + rec.motherName : ""].filter(Boolean).join(" / ")) : null,
               summaryRow("유입 경로", rec.source === "기타" ? ("기타 - " + rec.sourceEtc) : rec.source),
               rec.discountType ? summaryRow("할인 유형", rec.discountType) : null,
+              (rec.discountType === "가족할인" && rec.familyMemberName) ? summaryRow("가족 관계 수강생", rec.familyMemberName) : null,
               rec.signature ? h("div", { style: { marginTop: "10px" } },
                 h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" } }, "서명"),
                 h("img", { src: rec.signature, style: { height: "50px" } })
@@ -1364,16 +1368,15 @@ function App() {
   }
 
   function renderPart2() {
-    return h(Frag, null,
-      h("div", { className: "section-title" }, "등록 정보 & 서명 ", h("span", { className: "tag" }, "PART 02")),
-
-      h("div", { className: "field" },
+    function renderDiscountField() {
+      return h("div", { className: "field" },
         h("label", null, "할인 유형 ", h("span", { className: "hint" }, "중복 할인은 적용되지 않습니다")),
         h("div", { className: "pill-group" },
           DISCOUNT_OPTIONS.map(function (d) {
             return h(Pill, { key: d.key, selected: form.discountType===d.key, disabled: d.key === "가족할인" && discountBlocked, onClick: function(){ setDiscountType(d.key); } }, d.key);
           })
         ),
+        form.discountType === "가족할인" ? h("input", { type: "text", style: { marginTop: "10px" }, placeholder: "어떤 수강생과 가족인가요? (이름)", value: form.familyMemberName, onChange: function(e){ set("familyMemberName", e.target.value); } }) : null,
         form.discountType ? h("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--ink-soft)" } },
           (DISCOUNT_OPTIONS.filter(function (d) { return d.key === form.discountType; })[0] || {}).desc
         ) : null,
@@ -1382,7 +1385,11 @@ function App() {
             ? "3개월(12회) 등록은 이미 할인된 가격이라 추가 할인이 적용되지 않아요."
             : "그룹 레슨은 별도 요금 체계라 가족할인이 적용되지 않아요."
         ) : null
-      ),
+      );
+    }
+
+    return h(Frag, null,
+      h("div", { className: "section-title" }, "등록 정보 & 서명 ", h("span", { className: "tag" }, "PART 02")),
 
       !isMulti ? h(Frag, null,
         h("div", { className: "field" },
@@ -1427,6 +1434,8 @@ function App() {
           )
         ) : null,
 
+        form.enrollType ? renderDiscountField() : null,
+
         form.enrollType ? h("div", { className: "field" },
           h("label", null, "가격"),
           h("div", { className: "price-box" },
@@ -1463,6 +1472,7 @@ function App() {
           )
         ) : null
       ) : h(Frag, null,
+        renderDiscountField(),
         h("div", { className: "field" },
           h("label", null, "등록 과목 ", h("span", { className: "hint" }, "과목마다 악기·유형·기간을 각각 선택해 주세요")),
           h("div", null,
