@@ -943,7 +943,10 @@ function App() {
       var next = f.discountType === key ? "" : key;
       var patch = { discountType: next };
       if (next === "두과목 이상 할인" && (!f.subjects || f.subjects.length < 2)) {
-        patch.subjects = [{ instrument: "", enrollType: "", duration: "" }, { instrument: "", enrollType: "", duration: "" }];
+        var firstSubject = f.instrument
+          ? { instrument: f.instrument, enrollType: f.enrollType, duration: f.duration }
+          : { instrument: "", enrollType: "", duration: "" };
+        patch.subjects = [firstSubject, { instrument: "", enrollType: "", duration: "" }];
       }
       return Object.assign({}, f, patch);
     });
