@@ -776,6 +776,7 @@ function App() {
   var submittingState = useState(false); var submitting = submittingState[0], setSubmitting = submittingState[1];
   var submittedState = useState(false); var submitted = submittedState[0], setSubmitted = submittedState[1];
   var addressModalState = useState(false); var addressModalOpen = addressModalState[0], setAddressModalOpen = addressModalState[1];
+  var signatureModalState = useState(false); var signatureModalOpen = signatureModalState[0], setSignatureModalOpen = signatureModalState[1];
   var addressContainerRef = useRef(null);
   var printRef = useRef(null);
   var pdfBusyState = useState(false); var pdfBusy = pdfBusyState[0], setPdfBusy = pdfBusyState[1];
@@ -1534,7 +1535,12 @@ function App() {
 
       h("div", { className: "field" },
         h("label", null, "서명"),
-        h(SignaturePad, { onChange: function(dataUrl){ set("signature", dataUrl); } })
+        form.signature
+          ? h("div", { onClick: function(){ setSignatureModalOpen(true); }, style: { border: "1.5px dashed var(--rule)", borderRadius: "14px", padding: "14px", textAlign: "center", cursor: "pointer", background: "#fff" } },
+              h("img", { src: form.signature, style: { height: "70px" } }),
+              h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginTop: "6px" } }, "탭하여 다시 서명하기")
+            )
+          : h("div", { onClick: function(){ setSignatureModalOpen(true); }, style: { border: "1.5px dashed var(--rule)", borderRadius: "14px", padding: "30px", textAlign: "center", cursor: "pointer", background: "#fcfaf3", color: "var(--ink-soft)", fontSize: "14px", fontWeight: 600 } }, "✍️ 탭하여 서명하기")
       ),
 
       h("div", { className: "nav-row" },
@@ -1569,6 +1575,18 @@ function App() {
         ),
         h("div", { className: "addr-modal-body" },
           h("div", { ref: addressContainerRef })
+        )
+      )
+    ) : null,
+    signatureModalOpen ? h("div", { className: "addr-modal-backdrop", onClick: function(){ setSignatureModalOpen(false); } },
+      h("div", { className: "addr-modal", style: { height: "auto" }, onClick: function(e){ e.stopPropagation(); } },
+        h("div", { className: "addr-modal-head" },
+          h("span", null, "서명"),
+          h("button", { type: "button", onClick: function(){ setSignatureModalOpen(false); } }, "×")
+        ),
+        h("div", { style: { padding: "16px" } },
+          h(SignaturePad, { onChange: function(dataUrl){ set("signature", dataUrl); } }),
+          h("button", { type: "button", className: "btn primary", style: { marginTop: "14px", width: "100%" }, onClick: function(){ setSignatureModalOpen(false); } }, "완료")
         )
       )
     ) : null
