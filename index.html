@@ -287,6 +287,7 @@
     border-radius: 10px;
     background:#fff;
     touch-action:none;
+    overscroll-behavior: contain;
   }
   .sig-actions{
     display:flex;
@@ -660,14 +661,25 @@ function SignaturePad(props) {
     function resize() {
       var rect = canvas.getBoundingClientRect();
       var ratio = window.devicePixelRatio || 1;
-      canvas.width = rect.width * ratio;
-      canvas.height = rect.height * ratio;
+      var newWidth = Math.round(rect.width * ratio);
+      var newHeight = Math.round(rect.height * ratio);
+      // 모바일에서 스크롤/주소창 접힘만으로도 resize 이벤트가 발생하는데,
+      // 실제 크기 변화가 없으면 다시 그릴 필요가 없어요 (불필요한 초기화 방지).
+      if (newWidth === canvas.width && newHeight === canvas.height) return;
+      var prevImage = hasInk.current ? canvas.toDataURL("image/png") : null;
+      canvas.width = newWidth;
+      canvas.height = newHeight;
       var ctx = canvas.getContext("2d");
       ctx.scale(ratio, ratio);
       ctx.lineWidth = 2.4;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.strokeStyle = "#1F3B2D";
+      if (prevImage) {
+        var img = new Image();
+        img.onload = function () { ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+        img.src = prevImage;
+      }
     }
     resize();
     window.addEventListener("resize", resize);
