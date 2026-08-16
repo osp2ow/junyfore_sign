@@ -1329,7 +1329,7 @@ function App() {
       h("div", { className: "field" },
         h("label", null, "주소"),
         h("div", { className: "row2", style: { marginBottom: "10px" } },
-          h("input", { type: "text", placeholder: "주소를 입력하거나 오른쪽 '주소 검색'을 눌러주세요", value: form.address, onClick: openAddressSearch, onChange: function(e){ set("address", e.target.value); } })
+          h("input", { type: "text", placeholder: "주소를 입력해주세요", value: form.address, readOnly: true, onClick: openAddressSearch })
         ),
         h("div", { className: "row2" },
           h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 120px" }, onClick: openAddressSearch }, "주소 검색"),
