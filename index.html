@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>주니퍼 실용음악학원 · 등록 원서</title>
 
-<!-- Fonts: Song Myung (Korean display serif, for the hero title only) + Pretendard (Korean UI workhorse) -->
+<!-- Fonts: Black Han Sans (modern bold Korean display font, for the hero title only) + Pretendard (Korean UI workhorse) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Song+Myung&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
 
 <!-- Daum Postcode (주소 검색) -->
@@ -64,7 +64,7 @@
   /* ---------- Header ---------- */
   .header{ text-align:center; padding: 18px 0 10px; }
   .header .brand{
-    font-family:'Song Myung', serif;
+    font-family:'Black Han Sans', sans-serif;
     font-size: 30px;
     color: var(--juniper-deep);
     letter-spacing: 0.02em;
@@ -106,7 +106,7 @@
   }
   .progress .step .num{
     display:block;
-    font-family:'Song Myung', serif;
+    font-family:'Black Han Sans', sans-serif;
     font-size: 20px;
     margin-bottom:2px;
   }
@@ -162,7 +162,7 @@
     font-size:12px;
     margin-left:6px;
   }
-  input[type="text"], input[type="tel"], input[type="date"]{
+  input[type="text"], input[type="tel"], input[type="date"], input[type="password"], input[type="email"]{
     width:100%;
     padding: 14px 14px;
     font-size: 16px;
@@ -316,6 +316,7 @@
     font-weight:700;
     border:none;
     cursor:pointer;
+    word-break: keep-all;
     -webkit-tap-highlight-color: transparent;
   }
   .btn:active{ transform: scale(0.985); }
@@ -323,7 +324,7 @@
   .btn.primary:disabled{ background:#B9C3BC; cursor:not-allowed; }
   .btn.brass{ background: var(--brass); color:#fff; }
   .btn.brass:disabled{ background:#DDCFA6; cursor:not-allowed; }
-  .btn.ghost{ background:transparent; color: var(--ink-soft); border:1.5px solid var(--rule); flex: 0 0 110px;}
+  .btn.ghost{ background:transparent; color: var(--ink-soft); border:1.5px solid var(--rule); word-break: keep-all; }
 
   .error-banner{
     background:#FBEDEA;
@@ -367,7 +368,7 @@
     margin: 0 auto 18px;
   }
   .success-wrap h2{
-    font-family:'Song Myung', serif;
+    font-family:'Black Han Sans', sans-serif;
     color: var(--juniper-deep);
     font-size:22px;
     margin: 0 0 8px;
@@ -1035,7 +1036,7 @@ function App() {
     });
     return h("div", { className: "shell" },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" } },
-        h("div", { className: "brand", style: { fontFamily: "'Song Myung', serif", fontSize: "22px", color: "var(--juniper-deep)" } }, "등록 원서 목록"),
+        h("div", { className: "brand", style: { fontFamily: "'Black Han Sans', sans-serif", fontSize: "22px", color: "var(--juniper-deep)" } }, "등록 원서 목록"),
         h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: handleAdminLogout }, "로그아웃")
       ),
       h("div", { className: "card" },
@@ -1110,7 +1111,7 @@ function App() {
       ),
       h("div", { ref: printRef, style: { position: "absolute", left: "-9999px", top: 0, width: "700px", background: "#ffffff", padding: "40px", fontFamily: "'PretendardVariable','Pretendard',sans-serif", color: "#232323" } },
         h("div", { style: { textAlign: "center", marginBottom: "20px" } },
-          h("div", { style: { fontFamily: "'Song Myung', serif", fontSize: "26px", color: "#1F3B2D" } }, "주니퍼 실용음악학원"),
+          h("div", { style: { fontFamily: "'Black Han Sans', sans-serif", fontSize: "26px", color: "#1F3B2D" } }, "주니퍼 실용음악학원"),
           h("div", { style: { fontSize: "13px", letterSpacing: "0.2em", color: "#5b5b52", marginTop: "4px" } }, "등 록 원 서")
         ),
         summaryRow("등록 날짜", form.regDate),
