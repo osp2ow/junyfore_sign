@@ -207,6 +207,8 @@
     color:#fff;
   }
   .pill.wide{ flex: 1 1 auto; text-align:center; }
+  .pill.disabled{ opacity: 0.4; cursor: not-allowed; }
+  .pill.disabled:active{ transform: none; }
 
   .block-group{ display:flex; gap:10px; }
   .block-group .pill{ flex:1; text-align:center; padding: 16px 10px; }
@@ -619,10 +621,10 @@ function CheckIcon(props) {
 
 /* ---------------- Small components ---------------- */
 function Pill(props) {
-  var selected = props.selected, onClick = props.onClick, children = props.children, wide = props.wide;
+  var selected = props.selected, onClick = props.onClick, children = props.children, wide = props.wide, disabled = props.disabled;
   return h("div", {
-    className: "pill " + (selected ? "selected" : "") + " " + (wide ? "wide" : ""),
-    onClick: onClick,
+    className: "pill " + (selected ? "selected" : "") + " " + (wide ? "wide" : "") + " " + (disabled ? "disabled" : ""),
+    onClick: disabled ? undefined : onClick,
   }, children);
 }
 
@@ -895,15 +897,26 @@ function App() {
     if (priceOptions[i].key === form.duration) selectedPriceOpt = priceOptions[i];
   }
   var basePrice = selectedPriceOpt ? selectedPriceOpt.price : "";
-  var discountAmount = form.discountType === "가족할인" ? 10000 : 0;
+  var isThreeMonth = form.duration === "3개월(12회)";
+  var discountAmount = (form.discountType === "가족할인" && !isThreeMonth) ? 10000 : 0;
   var computedPrice = basePrice !== "" ? Math.max(0, basePrice - discountAmount) : "";
+
+  // 3개월(12회) 등록은 가격표 자체에 이미 할인이 포함되어 있어요 (1개월 가격 x 3 대비 할인된 금액).
+  // 그 할인 내역을 가격 박스에 보여주기 위한 계산입니다.
+  var oneMonthOpt = null;
+  for (var k = 0; k < priceOptions.length; k++) {
+    if (priceOptions[k].key === "1개월(4회)") oneMonthOpt = priceOptions[k];
+  }
+  var threeMonthRegularPrice = (isThreeMonth && oneMonthOpt) ? oneMonthOpt.price * 3 : null;
+  var threeMonthBuiltInDiscount = (threeMonthRegularPrice !== null && basePrice !== "") ? (threeMonthRegularPrice - basePrice) : 0;
 
   var subjectPrices = form.subjects.map(function (s) {
     var opts = priceOptionsFor(s.enrollType);
     var match = null;
     for (var j = 0; j < opts.length; j++) { if (opts[j].key === s.duration) match = opts[j]; }
     var base = match ? match.price : null;
-    return { base: base, discounted: base !== null ? Math.max(0, base - 10000) : null, note: match ? match.note : null };
+    var alreadyDiscounted = s.duration === "3개월(12회)"; // 3개월은 이미 할인된 가격이라 과목당 할인을 중복 적용하지 않음
+    return { base: base, discounted: base !== null ? (alreadyDiscounted ? base : Math.max(0, base - 10000)) : null, note: match ? match.note : null };
   });
   var multiComplete = form.subjects.length >= 2 && form.subjects.every(function (s) { return s.instrument && s.enrollType && s.duration; });
   var multiTotal = subjectPrices.reduce(function (sum, p) { return sum + (p.discounted || 0); }, 0);
@@ -913,6 +926,7 @@ function App() {
   }
 
   function setDiscountType(key) {
+    if (key === "가족할인" && isThreeMonth) return; // 3개월 등록은 이미 할인된 가격이라 중복 적용 안 함
     setForm(function (f) {
       var next = f.discountType === key ? "" : key;
       var patch = { discountType: next };
@@ -1347,11 +1361,14 @@ function App() {
         h("label", null, "할인 유형 ", h("span", { className: "hint" }, "중복 할인은 적용되지 않습니다")),
         h("div", { className: "pill-group" },
           DISCOUNT_OPTIONS.map(function (d) {
-            return h(Pill, { key: d.key, selected: form.discountType===d.key, onClick: function(){ setDiscountType(d.key); } }, d.key);
+            return h(Pill, { key: d.key, selected: form.discountType===d.key, disabled: d.key === "가족할인" && isThreeMonth, onClick: function(){ setDiscountType(d.key); } }, d.key);
           })
         ),
         form.discountType ? h("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--ink-soft)" } },
           (DISCOUNT_OPTIONS.filter(function (d) { return d.key === form.discountType; })[0] || {}).desc
+        ) : null,
+        isThreeMonth ? h("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--ink-soft)" } },
+          "3개월(12회) 등록은 이미 할인된 가격이라 추가 할인이 적용되지 않아요."
         ) : null
       ),
 
@@ -1378,7 +1395,10 @@ function App() {
           h("label", null, "등록 기간 ", h("span", { className: "hint" }, "수강료가 자동으로 계산됩니다")),
           h("div", { className: "pill-group" },
             priceOptions.map(function (opt) {
-              return h(Pill, { key: opt.key, selected: form.duration===opt.key, onClick: function(){ set("duration", opt.key); } },
+              return h(Pill, { key: opt.key, selected: form.duration===opt.key, onClick: function(){
+                set("duration", opt.key);
+                if (opt.key === "3개월(12회)" && form.discountType === "가족할인") set("discountType", "");
+              } },
                 opt.key + (opt.note ? " · " + opt.note : "")
               );
             })
@@ -1388,19 +1408,36 @@ function App() {
         form.enrollType ? h("div", { className: "field" },
           h("label", null, "가격"),
           h("div", { className: "price-box" },
-            h("div", { className: "price-row" },
-              h("span", { className: "price-label" }, "수강료"),
-              h("span", { className: "price-value" }, basePrice !== "" ? formatKRW(basePrice) : "기간을 선택해 주세요")
-            ),
-            (selectedPriceOpt && selectedPriceOpt.note) ? h("div", { className: "price-note" }, selectedPriceOpt.note + " 기준 금액입니다.") : null,
-            discountAmount > 0 ? h("div", { className: "price-row", style: { marginTop: "10px" } },
-              h("span", { className: "price-label" }, "할인 금액"),
-              h("span", { style: { fontWeight: 700, color: "var(--danger)" } }, "-" + formatKRW(discountAmount))
-            ) : null,
-            discountAmount > 0 ? h("div", { className: "price-row", style: { marginTop: "10px", borderTop: "1px solid var(--brass-soft)", paddingTop: "10px" } },
-              h("span", { className: "price-label" }, "최종 결제 금액"),
-              h("span", { className: "price-value" }, computedPrice !== "" ? formatKRW(computedPrice) : "")
-            ) : null
+            isThreeMonth && threeMonthRegularPrice !== null
+              ? h(Frag, null,
+                  h("div", { className: "price-row" },
+                    h("span", { className: "price-label" }, "기본가격 (1개월×3)"),
+                    h("span", null, formatKRW(threeMonthRegularPrice))
+                  ),
+                  h("div", { className: "price-row", style: { marginTop: "6px" } },
+                    h("span", { className: "price-label" }, "3개월 등록 할인"),
+                    h("span", { style: { fontWeight: 700, color: "var(--danger)" } }, "-" + formatKRW(threeMonthBuiltInDiscount))
+                  ),
+                  h("div", { className: "price-row", style: { marginTop: "10px", borderTop: "1px solid var(--brass-soft)", paddingTop: "10px" } },
+                    h("span", { className: "price-label" }, "수강료"),
+                    h("span", { className: "price-value" }, formatKRW(basePrice))
+                  )
+                )
+              : h(Frag, null,
+                  h("div", { className: "price-row" },
+                    h("span", { className: "price-label" }, "수강료"),
+                    h("span", { className: "price-value" }, basePrice !== "" ? formatKRW(basePrice) : "기간을 선택해 주세요")
+                  ),
+                  (selectedPriceOpt && selectedPriceOpt.note) ? h("div", { className: "price-note" }, selectedPriceOpt.note + " 기준 금액입니다.") : null,
+                  discountAmount > 0 ? h("div", { className: "price-row", style: { marginTop: "10px" } },
+                    h("span", { className: "price-label" }, "할인 금액"),
+                    h("span", { style: { fontWeight: 700, color: "var(--danger)" } }, "-" + formatKRW(discountAmount))
+                  ) : null,
+                  discountAmount > 0 ? h("div", { className: "price-row", style: { marginTop: "10px", borderTop: "1px solid var(--brass-soft)", paddingTop: "10px" } },
+                    h("span", { className: "price-label" }, "최종 결제 금액"),
+                    h("span", { className: "price-value" }, computedPrice !== "" ? formatKRW(computedPrice) : "")
+                  ) : null
+                )
           )
         ) : null
       ) : h(Frag, null,
