@@ -898,7 +898,8 @@ function App() {
   }
   var basePrice = selectedPriceOpt ? selectedPriceOpt.price : "";
   var isThreeMonth = form.duration === "3개월(12회)";
-  var discountAmount = (form.discountType === "가족할인" && !isThreeMonth) ? 10000 : 0;
+  var discountBlocked = isThreeMonth || form.enrollType === "그룹";
+  var discountAmount = (form.discountType === "가족할인" && !discountBlocked) ? 10000 : 0;
   var computedPrice = basePrice !== "" ? Math.max(0, basePrice - discountAmount) : "";
 
   // 3개월(12회) 등록은 가격표 자체에 이미 할인이 포함되어 있어요 (1개월 가격 x 3 대비 할인된 금액).
@@ -915,7 +916,7 @@ function App() {
     var match = null;
     for (var j = 0; j < opts.length; j++) { if (opts[j].key === s.duration) match = opts[j]; }
     var base = match ? match.price : null;
-    var alreadyDiscounted = s.duration === "3개월(12회)"; // 3개월은 이미 할인된 가격이라 과목당 할인을 중복 적용하지 않음
+    var alreadyDiscounted = s.duration === "3개월(12회)" || s.enrollType === "그룹"; // 3개월 또는 그룹은 이미 할인된/별도 요금이라 과목당 할인을 중복 적용하지 않음
     return { base: base, discounted: base !== null ? (alreadyDiscounted ? base : Math.max(0, base - 10000)) : null, note: match ? match.note : null };
   });
   var multiComplete = form.subjects.length >= 2 && form.subjects.every(function (s) { return s.instrument && s.enrollType && s.duration; });
@@ -926,7 +927,7 @@ function App() {
   }
 
   function setDiscountType(key) {
-    if (key === "가족할인" && isThreeMonth) return; // 3개월 등록은 이미 할인된 가격이라 중복 적용 안 함
+    if (key === "가족할인" && discountBlocked) return; // 3개월/그룹 등록은 할인 중복 적용 안 함
     setForm(function (f) {
       var next = f.discountType === key ? "" : key;
       var patch = { discountType: next };
@@ -1361,14 +1362,16 @@ function App() {
         h("label", null, "할인 유형 ", h("span", { className: "hint" }, "중복 할인은 적용되지 않습니다")),
         h("div", { className: "pill-group" },
           DISCOUNT_OPTIONS.map(function (d) {
-            return h(Pill, { key: d.key, selected: form.discountType===d.key, disabled: d.key === "가족할인" && isThreeMonth, onClick: function(){ setDiscountType(d.key); } }, d.key);
+            return h(Pill, { key: d.key, selected: form.discountType===d.key, disabled: d.key === "가족할인" && discountBlocked, onClick: function(){ setDiscountType(d.key); } }, d.key);
           })
         ),
         form.discountType ? h("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--ink-soft)" } },
           (DISCOUNT_OPTIONS.filter(function (d) { return d.key === form.discountType; })[0] || {}).desc
         ) : null,
-        isThreeMonth ? h("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--ink-soft)" } },
-          "3개월(12회) 등록은 이미 할인된 가격이라 추가 할인이 적용되지 않아요."
+        discountBlocked ? h("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--ink-soft)" } },
+          isThreeMonth
+            ? "3개월(12회) 등록은 이미 할인된 가격이라 추가 할인이 적용되지 않아요."
+            : "그룹 레슨은 별도 요금 체계라 가족할인이 적용되지 않아요."
         ) : null
       ),
 
@@ -1386,7 +1389,11 @@ function App() {
           h("label", null, "등록 유형"),
           h("div", { className: "block-group" },
             ["취미", "입시", "그룹"].map(function (t) {
-              return h(Pill, { key: t, wide: true, selected: form.enrollType===t, onClick: function(){ set("enrollType", t); set("duration",""); } }, t);
+              return h(Pill, { key: t, wide: true, selected: form.enrollType===t, onClick: function(){
+                set("enrollType", t);
+                set("duration", "");
+                if (t === "그룹" && form.discountType === "가족할인") set("discountType", "");
+              } }, t);
             })
           )
         ),
