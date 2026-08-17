@@ -753,37 +753,6 @@ function SignaturePad(props) {
 }
 
 /* ---------------- Main App ---------------- */
-/* =========================================================================
-   작성 중 임시 저장 — 실수로 새로고침되거나 앱이 닫혀도 작성하던 내용이
-   남아있도록 이 기기의 localStorage에 저장합니다. 제출 완료 시 지워집니다.
-========================================================================= */
-var DRAFT_KEY = "juniper_enrollment_draft_v1";
-var DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24시간 지난 임시 저장본은 무시
-
-function loadDraft() {
-  try {
-    var raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return null;
-    var parsed = JSON.parse(raw);
-    if (!parsed || !parsed.savedAt || (Date.now() - parsed.savedAt) > DRAFT_MAX_AGE_MS) return null;
-    return parsed;
-  } catch (e) {
-    return null;
-  }
-}
-
-function saveDraft(form, part) {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ form: form, part: part, savedAt: Date.now() }));
-  } catch (e) {
-    // 저장 실패(시크릿 모드 등)는 조용히 무시합니다.
-  }
-}
-
-function clearDraft() {
-  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
-}
-
 function emptyForm() {
   return {
     regDate: todayStr(),
@@ -811,9 +780,8 @@ function emptyForm() {
 }
 
 function App() {
-  var partState = useState(function(){ var d = loadDraft(); return (d && d.part) || 1; }); var part = partState[0], setPart = partState[1];
-  var formState = useState(function(){ var d = loadDraft(); return (d && d.form) || emptyForm(); }); var form = formState[0], setForm = formState[1];
-  var draftRestoredState = useState(function(){ return !!loadDraft(); }); var draftRestored = draftRestoredState[0], setDraftRestored = draftRestoredState[1];
+  var partState = useState(1); var part = partState[0], setPart = partState[1];
+  var formState = useState(emptyForm()); var form = formState[0], setForm = formState[1];
   var errorState = useState(""); var error = errorState[0], setError = errorState[1];
   var submittingState = useState(false); var submitting = submittingState[0], setSubmitting = submittingState[1];
   var submittedState = useState(false); var submitted = submittedState[0], setSubmitted = submittedState[1];
@@ -824,9 +792,16 @@ function App() {
   var pdfBusyState = useState(false); var pdfBusy = pdfBusyState[0], setPdfBusy = pdfBusyState[1];
 
   useEffect(function () {
-    if (submitted) return; // 제출 완료 후에는 임시 저장 불필요
-    var t = setTimeout(function () { saveDraft(form, part); }, 300);
-    return function () { clearTimeout(t); };
+    function handleBeforeUnload(e) {
+      if (submitted) return; // 제출 완료 후에는 경고 불필요
+      var hasContent = !!(form.name && form.name.trim()) || !!form.studentPhone || !!form.address || !!form.signature || part === 2;
+      if (!hasContent) return;
+      e.preventDefault();
+      e.returnValue = "작성 중인 등록 원서 내용이 저장되지 않습니다. 정말 이 페이지를 나가시겠습니까?";
+      return e.returnValue;
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return function () { window.removeEventListener("beforeunload", handleBeforeUnload); };
   }, [form, part, submitted]);
 
   // ----- 관리자 모드 -----
@@ -1074,7 +1049,6 @@ function App() {
     var err = validatePart1();
     if (err) { setError(err); return; }
     setError("");
-    setDraftRestored(false);
     setPart(2);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1095,7 +1069,6 @@ function App() {
       createdAt: FIREBASE_CONFIGURED ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
     });
     var afterOk = function () {
-      clearDraft();
       setSubmitting(false);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1114,12 +1087,10 @@ function App() {
   }
 
   function startOver() {
-    clearDraft();
     setForm(emptyForm());
     setPart(1);
     setSubmitted(false);
     setError("");
-    setDraftRestored(false);
   }
 
   function pdfFileName() {
@@ -1634,10 +1605,6 @@ function App() {
       ),
       h("div", { className: "staff" }),
       h(ProgressBar, { part: part }),
-      draftRestored ? h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", background: "#F3EEDD", border: "1px solid var(--brass-soft)", borderRadius: "10px", padding: "10px 14px", marginBottom: "16px", fontSize: "12.5px", color: "var(--ink-soft)" } },
-        h("span", null, "이전에 작성하던 내용을 이어서 불러왔어요."),
-        h("button", { type: "button", onClick: startOver, style: { background: "none", border: "none", color: "var(--juniper-deep)", fontWeight: 700, fontSize: "12.5px", cursor: "pointer", flex: "0 0 auto", textDecoration: "underline" } }, "새로 작성하기")
-      ) : null,
       error ? h("div", { className: "error-banner" }, error) : null,
       h("div", { className: "card" },
         part === 1 ? renderPart1() : null,
