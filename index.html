@@ -65,10 +65,11 @@
   /* ---------- Header ---------- */
   .header{ text-align:center; padding: 18px 0 10px; }
   .header .brand{
-    font-family:'Black Han Sans', sans-serif;
-    font-size: 30px;
+    font-family:'PretendardVariable','Pretendard',sans-serif;
+    font-weight: 600;
+    font-size: 28px;
     color: var(--juniper-deep);
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
   }
   .header .doc-title{
     margin-top:4px;
@@ -581,7 +582,7 @@ function buildSummaryTree(data) {
 
   return [
     h("div", { key: "hdr", style: { textAlign: "center", marginBottom: "20px" } },
-      h("div", { style: { fontFamily: "'Black Han Sans', sans-serif", fontSize: "26px", color: "#1F3B2D" } }, "주니퍼 실용음악학원"),
+      h("div", { style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 600, fontSize: "24px", color: "#1F3B2D" } }, "주니퍼 실용음악학원"),
       h("div", { style: { fontSize: "13px", letterSpacing: "0.2em", color: "#5b5b52", marginTop: "4px" } }, "등 록 원 서")
     ),
     summaryRow("등록 날짜", data.regDate),
