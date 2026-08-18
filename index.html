@@ -1275,10 +1275,16 @@ function App() {
           var subjectLabel = (rec.discountType === "두과목 이상 할인" && rec.subjects && rec.subjects.length)
             ? rec.subjects.map(function (s) { return s.instrument + "(" + s.enrollType + ")"; }).join(", ")
             : ((rec.instrument || "-") + " · " + (rec.enrollType || "-") + " · " + (rec.duration || "-"));
+          var smsBadge = null;
+          if (rec.smsStatus === "failed") smsBadge = { text: "문자 발송 실패", color: "var(--danger)", bg: "#FBEDEA" };
+          else if (rec.smsStatus === "partial") smsBadge = { text: "문자 일부 실패", color: "#9A6B1F", bg: "#FBF3E2" };
           return h("div", { key: rec.id, style: { border: "1px solid var(--rule)", borderRadius: "12px", padding: "12px 14px", marginBottom: "10px", cursor: "pointer" }, onClick: function(){ setExpandedId(isExpanded ? null : rec.id); } },
             h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" } },
               h("div", null,
-                h("div", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, rec.name || "(이름 없음)"),
+                h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                  h("span", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, rec.name || "(이름 없음)"),
+                  smsBadge ? h("span", { style: { fontSize: "11px", fontWeight: 700, color: smsBadge.color, background: smsBadge.bg, padding: "2px 7px", borderRadius: "999px" } }, smsBadge.text) : null
+                ),
                 h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)", marginTop: "2px" } }, subjectLabel)
               ),
               h("div", { style: { textAlign: "right", flex: "0 0 auto" } },
@@ -1295,6 +1301,14 @@ function App() {
               summaryRow("유입 경로", rec.source === "기타" ? ("기타 - " + rec.sourceEtc) : rec.source),
               rec.discountType ? summaryRow("할인 유형", rec.discountType) : null,
               (rec.discountType === "가족할인" && rec.familyMemberName) ? summaryRow("가족 관계 수강생", rec.familyMemberName) : null,
+              Array.isArray(rec.smsResults) && rec.smsResults.length ? h("div", { style: { marginTop: "10px" } },
+                h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" } }, "문자 발송 결과"),
+                rec.smsResults.map(function (r, idx) {
+                  return h("div", { key: idx, style: { fontSize: "12.5px", color: r.ok ? "var(--ink)" : "var(--danger)", marginBottom: "2px" } },
+                    (r.ok ? "✓ " : "✗ ") + r.phone + (r.ok ? " 발송 성공" : " 발송 실패" + (r.error ? " (" + r.error + ")" : ""))
+                  );
+                })
+              ) : null,
               rec.signature ? h("div", { style: { marginTop: "10px" } },
                 h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" } }, "서명"),
                 h("img", { src: rec.signature, style: { height: "50px" } })
