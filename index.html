@@ -868,6 +868,11 @@ function App() {
           console.error("PDF 파일 삭제 실패(등록 데이터는 삭제됨):", e);
         });
       }
+      if (rec.shortCode) {
+        db.collection("links").doc(rec.shortCode).delete().catch(function (e) {
+          console.error("단축 링크 삭제 실패(등록 데이터는 삭제됨):", e);
+        });
+      }
       setEnrollments(function (list) { return list.filter(function (e) { return e.id !== rec.id; }); });
       if (expandedId === rec.id) setExpandedId(null);
     }).catch(function (e) {
@@ -1085,6 +1090,10 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function makeShortCode() {
+    return (Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 6)).slice(0, 8);
+  }
+
   function submit() {
     var err = validatePart2();
     if (err) { setError(err); return; }
@@ -1110,15 +1119,18 @@ function App() {
         docRef.set(Object.assign({}, payload, extra || {})).then(afterOk).catch(afterErr);
       };
       if (!storage) { finish(); return; }
+      var shortCode = makeShortCode();
       var pdfStep = buildPdfBlob(printRef.current).then(function (blob) {
         var path = "enrollments/" + docRef.id + ".pdf";
         return storage.ref(path).put(blob).then(function () { return path; });
+      }).then(function (path) {
+        return db.collection("links").doc(shortCode).set({ pdfPath: path }).then(function () { return path; });
       });
       var timeout = new Promise(function (resolve, reject) {
         setTimeout(function () { reject(new Error("PDF 업로드 시간 초과")); }, 15000);
       });
       Promise.race([pdfStep, timeout]).then(function (path) {
-        finish({ pdfPath: path });
+        finish({ pdfPath: path, shortCode: shortCode });
       }).catch(function (e) {
         console.error("PDF 업로드 실패/시간초과 (등록은 계속 진행합니다):", e);
         finish();
