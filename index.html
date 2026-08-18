@@ -509,14 +509,28 @@ function priceOptionsFor(enrollType) {
   ];
   if (enrollType === "입시") return [
     { key: "1개월(4회)", price: 220000 },
+    { key: "3개월(12회)", price: 630000 },
   ];
   if (enrollType === "그룹") return [
     { key: "1개월(4회)", price: 100000, note: "1인당" },
+    { key: "3개월(12회)", price: 300000, note: "1인당" },
   ];
   if (enrollType === "전문") return [
     { key: "1개월(4회)", price: 220000 },
   ];
   return [];
+}
+
+// 1개월 가격 x3과 실제 3개월 가격의 차이 — "이미 할인이 포함된 3개월 상품"인지 판단할 때 씁니다.
+function threeMonthBuiltInDiscount_for(enrollType) {
+  var opts = priceOptionsFor(enrollType);
+  var one = null, three = null;
+  for (var i = 0; i < opts.length; i++) {
+    if (opts[i].key === "1개월(4회)") one = opts[i];
+    if (opts[i].key === "3개월(12회)") three = opts[i];
+  }
+  if (!one || !three) return 0;
+  return Math.max(0, one.price * 3 - three.price);
 }
 
 function enrollTypeOptionsFor(instrument) {
@@ -953,12 +967,9 @@ function App() {
   }
   var basePrice = selectedPriceOpt ? selectedPriceOpt.price : "";
   var isThreeMonth = form.duration === "3개월(12회)";
-  var discountBlocked = isThreeMonth || form.enrollType === "그룹";
-  var discountAmount = (form.discountType === "가족할인" && !discountBlocked) ? 10000 : 0;
-  var computedPrice = basePrice !== "" ? Math.max(0, basePrice - discountAmount) : "";
 
-  // 3개월(12회) 등록은 가격표 자체에 이미 할인이 포함되어 있어요 (1개월 가격 x 3 대비 할인된 금액).
-  // 그 할인 내역을 가격 박스에 보여주기 위한 계산입니다.
+  // 3개월(12회) 등록은 가격표 자체에 이미 할인이 포함된 경우가 있어요 (1개월 가격 x 3 대비 할인된 금액).
+  // 그 할인 내역을 가격 박스에 보여주고, 중복 할인 방지 여부를 판단하는 데 씁니다.
   var oneMonthOpt = null;
   for (var k = 0; k < priceOptions.length; k++) {
     if (priceOptions[k].key === "1개월(4회)") oneMonthOpt = priceOptions[k];
@@ -966,12 +977,18 @@ function App() {
   var threeMonthRegularPrice = (isThreeMonth && oneMonthOpt) ? oneMonthOpt.price * 3 : null;
   var threeMonthBuiltInDiscount = (threeMonthRegularPrice !== null && basePrice !== "") ? (threeMonthRegularPrice - basePrice) : 0;
 
+  // 이미 할인이 포함된 3개월 상품(취미/입시)이거나 그룹 레슨(별도 요금 체계)이면 추가 할인을 막습니다.
+  var discountBlocked = (isThreeMonth && threeMonthBuiltInDiscount > 0) || form.enrollType === "그룹";
+  var discountAmount = (form.discountType === "가족할인" && !discountBlocked) ? 10000 : 0;
+  var computedPrice = basePrice !== "" ? Math.max(0, basePrice - discountAmount) : "";
+
   var subjectPrices = form.subjects.map(function (s) {
     var opts = priceOptionsFor(s.enrollType);
     var match = null;
     for (var j = 0; j < opts.length; j++) { if (opts[j].key === s.duration) match = opts[j]; }
     var base = match ? match.price : null;
-    var alreadyDiscounted = s.duration === "3개월(12회)" || s.enrollType === "그룹"; // 3개월 또는 그룹은 이미 할인된/별도 요금이라 과목당 할인을 중복 적용하지 않음
+    // 이미 할인이 포함된 3개월 상품(취미/입시)이거나 그룹 레슨이면, 과목당 할인을 중복 적용하지 않습니다.
+    var alreadyDiscounted = (s.duration === "3개월(12회)" && threeMonthBuiltInDiscount_for(s.enrollType) > 0) || s.enrollType === "그룹";
     return { base: base, discounted: base !== null ? (alreadyDiscounted ? base : Math.max(0, base - 10000)) : null, note: match ? match.note : null };
   });
   var multiComplete = form.subjects.length >= 2 && form.subjects.every(function (s) { return s.instrument && s.enrollType && s.duration; });
@@ -1514,7 +1531,7 @@ function App() {
         form.enrollType ? h("div", { className: "field" },
           h("label", null, "가격"),
           h("div", { className: "price-box" },
-            isThreeMonth && threeMonthRegularPrice !== null
+            isThreeMonth && threeMonthRegularPrice !== null && threeMonthBuiltInDiscount > 0
               ? h(Frag, null,
                   h("div", { className: "price-row" },
                     h("span", { className: "price-label" }, "기본가격 (1개월×3)"),
