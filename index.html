@@ -1082,21 +1082,20 @@ function App() {
       setError("제출 중 오류가 발생했습니다: " + e.message);
     };
     if (FIREBASE_CONFIGURED) {
-      db.collection(COLLECTION_NAME).add(payload).then(function (docRef) {
-        // PDF를 만들어 Storage에 올려두면, 나중에 문자로 링크를 보낼 때 이 주소를 그대로 씁니다.
-        // 이 단계가 실패해도 등록 원서 저장 자체는 이미 끝난 상태라 실패를 무시하고 진행해요.
-        if (!storage) { afterOk(); return; }
-        buildPdfBlob(printRef.current).then(function (blob) {
-          var path = "enrollments/" + docRef.id + ".pdf";
-          return storage.ref(path).put(blob).then(function () { return path; });
-        }).then(function (path) {
-          return docRef.update({ pdfPath: path });
-        }).catch(function (e) {
-          console.error("PDF 업로드 실패(등록 자체는 완료됨):", e);
-        }).finally(function () {
-          afterOk();
-        });
-      }).catch(afterErr);
+      var docRef = db.collection(COLLECTION_NAME).doc(); // ID를 미리 생성만 해두고 아직 쓰지 않음
+      var finish = function (extra) {
+        docRef.set(Object.assign({}, payload, extra || {})).then(afterOk).catch(afterErr);
+      };
+      if (!storage) { finish(); return; }
+      buildPdfBlob(printRef.current).then(function (blob) {
+        var path = "enrollments/" + docRef.id + ".pdf";
+        return storage.ref(path).put(blob).then(function () { return path; });
+      }).then(function (path) {
+        finish({ pdfPath: path });
+      }).catch(function (e) {
+        console.error("PDF 업로드 실패(등록은 계속 진행합니다):", e);
+        finish();
+      });
     } else {
       console.log("Firebase 미설정 — 콘솔에만 출력합니다:", payload);
       afterOk();
