@@ -263,9 +263,9 @@
   .check-text{ font-size:14px; line-height:1.5; color:var(--ink); }
   .rule-underline{
     font-weight:700;
-    color: var(--juniper-deep);
+    color: #1F3B2D;
     text-decoration: underline;
-    text-decoration-color: var(--brass);
+    text-decoration-color: #B8933B;
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
   }
@@ -378,9 +378,10 @@
     margin: 0 auto 18px;
   }
   .success-wrap h2{
-    font-family:'Black Han Sans', sans-serif;
+    font-family:'PretendardVariable','Pretendard',sans-serif;
+    font-weight:700;
     color: var(--juniper-deep);
-    font-size:22px;
+    font-size:21px;
     margin: 0 0 8px;
   }
   .success-wrap p{ color: var(--ink-soft); font-size:14px; margin: 4px 0; }
@@ -597,7 +598,7 @@ function buildSummaryTree(data) {
     summaryDivider(),
     h("div", { key: "rules", style: { marginTop: "4px" } },
       h("div", { style: { fontSize: "12px", fontWeight: 700, color: "#1F3B2D", marginBottom: "6px" } }, "학원 원칙 (확인 및 동의함)"),
-      ACADEMY_RULES.map(function (r, idx) { return h("div", { key: idx, style: { fontSize: "12px", lineHeight: "1.6", color: "#232323" } }, "· " + r); })
+      ACADEMY_RULES.map(function (r, idx) { return h("div", { key: idx, style: { fontSize: "12px", lineHeight: "1.6", color: "#232323" } }, "· ", underlineKeywords(r, ACADEMY_RULE_EMPHASIS[idx])); })
     ),
     h("div", { key: "refund", style: { marginTop: "14px" } },
       h("div", { style: { fontSize: "12px", fontWeight: 700, color: "#1F3B2D", marginBottom: "6px" } }, "환불 규정 (확인 및 동의함)"),
@@ -824,6 +825,7 @@ function App() {
   var expandedIdState = useState(null); var expandedId = expandedIdState[0], setExpandedId = expandedIdState[1];
   var pdfRecordState = useState(null); var pdfRecord = pdfRecordState[0], setPdfRecord = pdfRecordState[1];
   var downloadingIdState = useState(null); var downloadingId = downloadingIdState[0], setDownloadingId = downloadingIdState[1];
+  var deletingIdState = useState(null); var deletingId = deletingIdState[0], setDeletingId = deletingIdState[1];
   var adminPrintRef = useRef(null);
 
   useEffect(function () {
@@ -853,6 +855,27 @@ function App() {
     setListError("");
     setDownloadingId(rec.id);
     setPdfRecord(rec);
+  }
+
+  function handleDeleteRecord(rec) {
+    var confirmed = window.confirm((rec.name || "이 학생") + " 학생의 등록 원서를 정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.");
+    if (!confirmed) return;
+    setListError("");
+    setDeletingId(rec.id);
+    db.collection(COLLECTION_NAME).doc(rec.id).delete().then(function () {
+      if (rec.pdfPath && storage) {
+        storage.ref(rec.pdfPath).delete().catch(function (e) {
+          console.error("PDF 파일 삭제 실패(등록 데이터는 삭제됨):", e);
+        });
+      }
+      setEnrollments(function (list) { return list.filter(function (e) { return e.id !== rec.id; }); });
+      if (expandedId === rec.id) setExpandedId(null);
+    }).catch(function (e) {
+      console.error(e);
+      setListError("삭제 중 오류가 발생했습니다: " + e.message);
+    }).finally(function () {
+      setDeletingId(null);
+    });
   }
 
 
@@ -1087,13 +1110,17 @@ function App() {
         docRef.set(Object.assign({}, payload, extra || {})).then(afterOk).catch(afterErr);
       };
       if (!storage) { finish(); return; }
-      buildPdfBlob(printRef.current).then(function (blob) {
+      var pdfStep = buildPdfBlob(printRef.current).then(function (blob) {
         var path = "enrollments/" + docRef.id + ".pdf";
         return storage.ref(path).put(blob).then(function () { return path; });
-      }).then(function (path) {
+      });
+      var timeout = new Promise(function (resolve, reject) {
+        setTimeout(function () { reject(new Error("PDF 업로드 시간 초과")); }, 15000);
+      });
+      Promise.race([pdfStep, timeout]).then(function (path) {
         finish({ pdfPath: path });
       }).catch(function (e) {
-        console.error("PDF 업로드 실패(등록은 계속 진행합니다):", e);
+        console.error("PDF 업로드 실패/시간초과 (등록은 계속 진행합니다):", e);
         finish();
       });
     } else {
@@ -1144,24 +1171,6 @@ function App() {
     }).catch(function (e) {
       console.error(e);
       setError("PDF 생성 중 오류가 발생했습니다: " + e.message);
-    }).finally(function () {
-      setPdfBusy(false);
-    });
-  }
-
-  function handleSharePdf() {
-    setError("");
-    setPdfBusy(true);
-    buildPdfBlob(printRef.current).then(function (blob) {
-      var file = new File([blob], pdfFileName(), { type: "application/pdf" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        return navigator.share({ files: [file], title: "등록 원서", text: (form.name || "학생") + " 학생 등록 원서" });
-      }
-      setError("이 브라우저(또는 데스크톱)에서는 파일 공유가 지원되지 않아요. '태블릿·휴대폰의 크롬'에서 열면 카카오톡/문자로 바로 공유할 수 있어요. 지금은 'PDF 저장'을 눌러 받은 뒤 직접 첨부해 주세요.");
-    }).catch(function (e) {
-      if (e && e.name === "AbortError") return; // 사용자가 공유 시트를 닫음 — 에러 아님
-      console.error(e);
-      setError("공유 중 오류가 발생했습니다: " + e.message);
     }).finally(function () {
       setPdfBusy(false);
     });
@@ -1278,13 +1287,22 @@ function App() {
                 h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" } }, "서명"),
                 h("img", { src: rec.signature, style: { height: "50px" } })
               ) : null,
-              h("button", {
-                type: "button",
-                className: "btn ghost",
-                style: { marginTop: "12px", width: "100%" },
-                disabled: downloadingId === rec.id,
-                onClick: function (e) { e.stopPropagation(); handleDownloadRecordPdf(rec); }
-              }, downloadingId === rec.id ? "PDF 생성 중…" : "PDF 다운로드")
+              h("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                h("button", {
+                  type: "button",
+                  className: "btn ghost",
+                  style: { flex: 1 },
+                  disabled: downloadingId === rec.id,
+                  onClick: function (e) { e.stopPropagation(); handleDownloadRecordPdf(rec); }
+                }, downloadingId === rec.id ? "PDF 생성 중…" : "PDF 다운로드"),
+                h("button", {
+                  type: "button",
+                  className: "btn ghost",
+                  style: { flex: "0 0 auto", color: "var(--danger)", borderColor: "#EBC6BC" },
+                  disabled: deletingId === rec.id,
+                  onClick: function (e) { e.stopPropagation(); handleDeleteRecord(rec); }
+                }, deletingId === rec.id ? "삭제 중…" : "삭제")
+              )
             ) : null
           );
         })
@@ -1310,8 +1328,7 @@ function App() {
         ),
         error ? h("div", { className: "error-banner", style: { textAlign: "left", marginTop: "16px" } }, error) : null,
         h("div", { className: "nav-row" },
-          h("button", { type: "button", className: "btn ghost", style: { flex: 1 }, disabled: pdfBusy, onClick: handleDownloadPdf }, pdfBusy ? "생성 중…" : "PDF 저장"),
-          h("button", { type: "button", className: "btn brass", disabled: pdfBusy, onClick: handleSharePdf }, pdfBusy ? "생성 중…" : "카톡 · 문자로 공유")
+          h("button", { type: "button", className: "btn ghost", disabled: pdfBusy, onClick: handleDownloadPdf }, pdfBusy ? "생성 중…" : "PDF 저장")
         ),
         h("div", { className: "nav-row" },
           h("button", { className: "btn primary", onClick: startOver }, "다음 학생 등록하기")
