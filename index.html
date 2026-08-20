@@ -1370,6 +1370,11 @@ function App() {
           ? form.subjects.map(function (s) { return s.instrument + "(" + s.enrollType + ")"; }).join(" · ")
           : (form.instrument + " · " + form.enrollType + " · " + form.duration)
         ),
+        h("div", { style: { marginTop: "14px", fontSize: "13px", color: "var(--ink-soft)" } },
+          "등록하신 번호로 카카오톡 알림톡을 보내드렸어요.",
+          h("br"),
+          h("span", { style: { fontSize: "11.5px" } }, "알림톡 수신이 어려운 경우 문자로 대신 안내드려요.")
+        ),
         error ? h("div", { className: "error-banner", style: { textAlign: "left", marginTop: "16px" } }, error) : null,
         h("div", { className: "nav-row" },
           h("button", { type: "button", className: "btn ghost", disabled: pdfBusy, onClick: handleDownloadPdf }, pdfBusy ? "생성 중…" : "PDF 저장")
