@@ -656,6 +656,43 @@ function Pill(props) {
   }, children);
 }
 
+function EditableLines(props) {
+  var label = props.label, lines = props.lines || [], onChange = props.onChange;
+  return h("div", { className: "field" },
+    h("label", null, label),
+    lines.map(function (line, idx) {
+      return h("div", { key: idx, style: { display: "flex", gap: "8px", marginBottom: "6px" } },
+        h("input", {
+          type: "text",
+          style: { flex: 1 },
+          value: line,
+          onChange: function (e) {
+            var next = lines.slice();
+            next[idx] = e.target.value;
+            onChange(next);
+          }
+        }),
+        h("button", {
+          type: "button",
+          className: "link-btn",
+          style: { color: "var(--danger)", flex: "0 0 auto" },
+          onClick: function () {
+            var next = lines.slice();
+            next.splice(idx, 1);
+            onChange(next);
+          }
+        }, "삭제")
+      );
+    }),
+    h("button", {
+      type: "button",
+      className: "btn ghost",
+      style: { width: "100%" },
+      onClick: function () { onChange(lines.concat([""])); }
+    }, "+ 항목 추가")
+  );
+}
+
 function CheckItem(props) {
   var checked = props.checked, onClick = props.onClick, children = props.children;
   return h("div", { className: "check-item", onClick: onClick },
@@ -843,6 +880,14 @@ function App() {
   var deletingIdState = useState(null); var deletingId = deletingIdState[0], setDeletingId = deletingIdState[1];
   var adminPrintRef = useRef(null);
 
+  // ----- 선생님 프로필 (관리자 전용) -----
+  var teachersState = useState([]); var teachers = teachersState[0], setTeachers = teachersState[1];
+  var teachersLoadingState = useState(false); var teachersLoading = teachersLoadingState[0], setTeachersLoading = teachersLoadingState[1];
+  var teachersErrorState = useState(""); var teachersError = teachersErrorState[0], setTeachersError = teachersErrorState[1];
+  var expandedTeacherIdState = useState(null); var expandedTeacherId = expandedTeacherIdState[0], setExpandedTeacherId = expandedTeacherIdState[1];
+  var teacherSavingIdState = useState(null); var teacherSavingId = teacherSavingIdState[0], setTeacherSavingId = teacherSavingIdState[1];
+  var teacherPhotoUploadingIdState = useState(null); var teacherPhotoUploadingId = teacherPhotoUploadingIdState[0], setTeacherPhotoUploadingId = teacherPhotoUploadingIdState[1];
+
   useEffect(function () {
     if (!pdfRecord) return;
     var timer = setTimeout(function () {
@@ -923,6 +968,87 @@ function App() {
       setListLoading(false);
     });
   }, [mode, authUser]);
+
+  useEffect(function () {
+    if (adminTab !== "teachers" || !authUser || !db) return;
+    setTeachersLoading(true);
+    setTeachersError("");
+    db.collection("teachers").get().then(function (snap) {
+      var list = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      setTeachers(list);
+    }).catch(function (e) {
+      console.error(e);
+      setTeachersError("선생님 목록을 불러오지 못했습니다: " + e.message);
+    }).finally(function () {
+      setTeachersLoading(false);
+    });
+  }, [adminTab, authUser]);
+
+  function emptyTeacher() {
+    return { name: "", role: "", instruments: [], education: "", career: [], lessonHistory: [], lessonDays: "", photoPath: "", photoUrl: "" };
+  }
+
+  function addTeacher() {
+    var t = emptyTeacher();
+    db.collection("teachers").add(t).then(function (ref) {
+      setTeachers(function (list) { return list.concat([Object.assign({ id: ref.id }, t)]); });
+      setExpandedTeacherId(ref.id);
+    }).catch(function (e) {
+      console.error(e);
+      setTeachersError("선생님 추가 중 오류가 발생했습니다: " + e.message);
+    });
+  }
+
+  function updateTeacherLocal(id, patch) {
+    setTeachers(function (list) { return list.map(function (t) { return t.id === id ? Object.assign({}, t, patch) : t; }); });
+  }
+
+  function saveTeacher(t) {
+    var data = Object.assign({}, t);
+    delete data.id;
+    setTeacherSavingId(t.id);
+    db.collection("teachers").doc(t.id).set(data).catch(function (e) {
+      console.error(e);
+      setTeachersError("저장 중 오류가 발생했습니다: " + e.message);
+    }).finally(function () {
+      setTeacherSavingId(null);
+    });
+  }
+
+  function deleteTeacher(t) {
+    var confirmed = window.confirm((t.name || "이 선생님") + " 프로필을 정말 삭제할까요?");
+    if (!confirmed) return;
+    db.collection("teachers").doc(t.id).delete().then(function () {
+      if (t.photoPath && storage) {
+        storage.ref(t.photoPath).delete().catch(function (e) { console.error("사진 삭제 실패:", e); });
+      }
+      setTeachers(function (list) { return list.filter(function (x) { return x.id !== t.id; }); });
+      if (expandedTeacherId === t.id) setExpandedTeacherId(null);
+    }).catch(function (e) {
+      console.error(e);
+      setTeachersError("삭제 중 오류가 발생했습니다: " + e.message);
+    });
+  }
+
+  function uploadTeacherPhoto(t, file) {
+    if (!storage || !file) return;
+    setTeacherPhotoUploadingId(t.id);
+    var path = "teachers/" + t.id + "_" + Date.now() + ".jpg";
+    storage.ref(path).put(file).then(function () {
+      return storage.ref(path).getDownloadURL();
+    }).then(function (url) {
+      var oldPath = t.photoPath;
+      updateTeacherLocal(t.id, { photoPath: path, photoUrl: url });
+      return db.collection("teachers").doc(t.id).set({ photoPath: path, photoUrl: url }, { merge: true }).then(function () {
+        if (oldPath && storage) storage.ref(oldPath).delete().catch(function () {});
+      });
+    }).catch(function (e) {
+      console.error(e);
+      setTeachersError("사진 업로드 중 오류가 발생했습니다: " + e.message);
+    }).finally(function () {
+      setTeacherPhotoUploadingId(null);
+    });
+  }
 
   function openAdmin() {
     setMode("adminLogin");
@@ -1257,7 +1383,8 @@ function App() {
       ),
       h("div", { className: "pill-group", style: { marginBottom: "16px" } },
         h(Pill, { selected: adminTab==="list", onClick: function(){ setAdminTab("list"); } }, "목록"),
-        h(Pill, { selected: adminTab==="stats", onClick: function(){ setAdminTab("stats"); } }, "유입 경로 통계")
+        h(Pill, { selected: adminTab==="stats", onClick: function(){ setAdminTab("stats"); } }, "유입 경로 통계"),
+        h(Pill, { selected: adminTab==="teachers", onClick: function(){ setAdminTab("teachers"); } }, "선생님 프로필")
       ),
       adminTab === "stats" ? h("div", { className: "card" },
         h("div", { className: "section-title" }, "유입 경로 통계"),
@@ -1346,6 +1473,80 @@ function App() {
                   disabled: deletingId === rec.id,
                   onClick: function (e) { e.stopPropagation(); handleDeleteRecord(rec); }
                 }, deletingId === rec.id ? "삭제 중…" : "삭제")
+              )
+            ) : null
+          );
+        })
+      ) : null,
+      adminTab === "teachers" ? h("div", { className: "card" },
+        h("div", { className: "section-title" }, "선생님 프로필 ", h("span", { className: "tag" }, "관리자 전용")),
+        teachersError ? h("div", { className: "error-banner" }, teachersError) : null,
+        teachersLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "불러오는 중…") : null,
+        h("button", { type: "button", className: "btn primary", style: { width: "100%", marginBottom: "16px" }, onClick: addTeacher }, "+ 새 선생님 추가"),
+        teachers.map(function (t) {
+          var isExpanded = expandedTeacherId === t.id;
+          return h("div", { key: t.id, style: { border: "1px solid var(--rule)", borderRadius: "12px", padding: "12px 14px", marginBottom: "10px" } },
+            h("div", { style: { display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(isExpanded ? null : t.id); } },
+              t.photoUrl
+                ? h("img", { src: t.photoUrl, style: { width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto" } })
+                : h("div", { style: { width: "44px", height: "44px", borderRadius: "50%", background: "var(--rule)", flex: "0 0 auto" } }),
+              h("div", { style: { flex: 1 } },
+                h("div", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, t.name || "(이름 없음)"),
+                h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)" } }, [t.role, (t.instruments || []).join(", ")].filter(Boolean).join(" · "))
+              )
+            ),
+            isExpanded ? h("div", { style: { marginTop: "14px", paddingTop: "14px", borderTop: "1px solid var(--rule)" } },
+              h("div", { className: "field" },
+                h("label", null, "사진"),
+                h("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+                  t.photoUrl ? h("img", { src: t.photoUrl, style: { width: "60px", height: "60px", borderRadius: "10px", objectFit: "cover" } }) : null,
+                  h("input", {
+                    type: "file",
+                    accept: "image/*",
+                    disabled: teacherPhotoUploadingId === t.id,
+                    onChange: function (e) {
+                      var file = e.target.files && e.target.files[0];
+                      if (file) uploadTeacherPhoto(t, file);
+                    }
+                  }),
+                  teacherPhotoUploadingId === t.id ? h("span", { style: { fontSize: "12px", color: "var(--ink-soft)" } }, "업로드 중…") : null
+                )
+              ),
+              h("div", { className: "row2" },
+                h("div", { className: "field" },
+                  h("label", null, "이름"),
+                  h("input", { type: "text", value: t.name, onChange: function(e){ updateTeacherLocal(t.id, { name: e.target.value }); } })
+                ),
+                h("div", { className: "field" },
+                  h("label", null, "직책"),
+                  h("input", { type: "text", placeholder: "예: 부원장 / 드럼강사", value: t.role, onChange: function(e){ updateTeacherLocal(t.id, { role: e.target.value }); } })
+                )
+              ),
+              h("div", { className: "field" },
+                h("label", null, "담당 악기"),
+                h("div", { className: "pill-group" },
+                  ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
+                    var selected = (t.instruments || []).indexOf(i) !== -1;
+                    return h(Pill, { key: i, selected: selected, onClick: function(){
+                      var next = selected ? t.instruments.filter(function(x){return x!==i;}) : (t.instruments || []).concat([i]);
+                      updateTeacherLocal(t.id, { instruments: next });
+                    } }, i);
+                  })
+                )
+              ),
+              h("div", { className: "field" },
+                h("label", null, "학력사항"),
+                h("input", { type: "text", value: t.education, onChange: function(e){ updateTeacherLocal(t.id, { education: e.target.value }); } })
+              ),
+              h(EditableLines, { label: "경력사항", lines: t.career, onChange: function(next){ updateTeacherLocal(t.id, { career: next }); } }),
+              h(EditableLines, { label: "레슨이력", lines: t.lessonHistory, onChange: function(next){ updateTeacherLocal(t.id, { lessonHistory: next }); } }),
+              h("div", { className: "field" },
+                h("label", null, "레슨가능요일"),
+                h("input", { type: "text", placeholder: "예: 월요일 / 수요일 / 금요일", value: t.lessonDays, onChange: function(e){ updateTeacherLocal(t.id, { lessonDays: e.target.value }); } })
+              ),
+              h("div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
+                h("button", { type: "button", className: "btn primary", style: { flex: 1 }, disabled: teacherSavingId === t.id, onClick: function(){ saveTeacher(t); } }, teacherSavingId === t.id ? "저장 중…" : "저장"),
+                h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto", color: "var(--danger)", borderColor: "#EBC6BC" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
               )
             ) : null
           );
