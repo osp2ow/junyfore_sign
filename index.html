@@ -488,18 +488,18 @@ if (FIREBASE_CONFIGURED) {
 /* =========================================================================
    학원 원칙 / 환불 규정 — 원장님과 확정한 문구입니다.
 ========================================================================= */
-// "드럼 연습실" 앱과 톤을 맞춘 색상 — 선생님 프로필 탭 전용
+// 상담 자료(선생님 프로필 · 학원비 안내 · 커리큘럼) 전용 — 다크 아카데미(차콜+골드) 톤
 var TC = {
-  bg: "#F0F9F8",
-  surface: "#FFFFFF",
-  surface2: "#F1F6F5",
-  border: "#DCE7E6",
-  accent: "#2FBFAF",
-  accentBright: "#17968A",
-  accentSoft: "rgba(47,191,175,0.12)",
-  text: "#1E2B2A",
-  textMuted: "#5C6E6C",
-  textFaint: "#94A3A2",
+  bg: "#17181A",
+  surface: "#1F2124",
+  surface2: "#26282B",
+  border: "rgba(255,255,255,0.09)",
+  accent: "#C9A961",
+  accentBright: "#E8C97A",
+  accentSoft: "rgba(201,169,97,0.15)",
+  text: "#F5F1E8",
+  textMuted: "#B8B2A4",
+  textFaint: "#7A7568",
 };
 
 var ACADEMY_RULES = [
@@ -989,6 +989,14 @@ function App() {
   var teacherSavingIdState = useState(null); var teacherSavingId = teacherSavingIdState[0], setTeacherSavingId = teacherSavingIdState[1];
   var teacherPhotoUploadingIdState = useState(null); var teacherPhotoUploadingId = teacherPhotoUploadingIdState[0], setTeacherPhotoUploadingId = teacherPhotoUploadingIdState[1];
 
+  // ----- 커리큘럼 (관리자 전용) -----
+  var curriculumInstrumentState = useState(null); var curriculumInstrument = curriculumInstrumentState[0], setCurriculumInstrument = curriculumInstrumentState[1];
+  var curriculumDataState = useState({}); var curriculumData = curriculumDataState[0], setCurriculumData = curriculumDataState[1];
+  var curriculumLoadingState = useState(false); var curriculumLoading = curriculumLoadingState[0], setCurriculumLoading = curriculumLoadingState[1];
+  var curriculumErrorState = useState(""); var curriculumError = curriculumErrorState[0], setCurriculumError = curriculumErrorState[1];
+  var curriculumSavingState = useState(false); var curriculumSaving = curriculumSavingState[0], setCurriculumSaving = curriculumSavingState[1];
+  var curriculumEditingState = useState(false); var curriculumEditing = curriculumEditingState[0], setCurriculumEditing = curriculumEditingState[1];
+
   useEffect(function () {
     if (!pdfRecord) return;
     var timer = setTimeout(function () {
@@ -1148,6 +1156,40 @@ function App() {
       setTeachersError("사진 업로드 중 오류가 발생했습니다: " + e.message);
     }).finally(function () {
       setTeacherPhotoUploadingId(null);
+    });
+  }
+
+  function fetchCurriculum(instrument) {
+    if (!db) return;
+    setCurriculumLoading(true);
+    setCurriculumError("");
+    db.collection("curriculum").doc(instrument).get().then(function (doc) {
+      var data = doc.exists ? doc.data() : { stages: [] };
+      setCurriculumData(function (prev) { var next = Object.assign({}, prev); next[instrument] = data; return next; });
+    }).catch(function (e) {
+      console.error(e);
+      setCurriculumError("커리큘럼을 불러오지 못했습니다: " + e.message);
+    }).finally(function () {
+      setCurriculumLoading(false);
+    });
+  }
+
+  useEffect(function () {
+    if (adminTab !== "curriculum" || !curriculumInstrument || !authUser || !db) return;
+    if (curriculumData[curriculumInstrument]) return;
+    fetchCurriculum(curriculumInstrument);
+  }, [adminTab, curriculumInstrument, authUser]);
+
+  function saveCurriculum(instrument, stages) {
+    setCurriculumSaving(true);
+    db.collection("curriculum").doc(instrument).set({ stages: stages }).then(function () {
+      setCurriculumData(function (prev) { var next = Object.assign({}, prev); next[instrument] = { stages: stages }; return next; });
+      setCurriculumEditing(false);
+    }).catch(function (e) {
+      console.error(e);
+      setCurriculumError("저장 중 오류가 발생했습니다: " + e.message);
+    }).finally(function () {
+      setCurriculumSaving(false);
     });
   }
 
@@ -1486,7 +1528,9 @@ function App() {
       h("div", { className: "pill-group", style: { marginBottom: "16px" } },
         h(Pill, { selected: adminTab==="list", onClick: function(){ setAdminTab("list"); } }, "목록"),
         h(Pill, { selected: adminTab==="stats", onClick: function(){ setAdminTab("stats"); } }, "유입 경로 통계"),
-        h(Pill, { selected: adminTab==="teachers", onClick: function(){ setAdminTab("teachers"); } }, "선생님 프로필")
+        h(Pill, { selected: adminTab==="teachers", onClick: function(){ setAdminTab("teachers"); } }, "선생님 프로필"),
+        h(Pill, { selected: adminTab==="pricing", onClick: function(){ setAdminTab("pricing"); } }, "학원비 안내"),
+        h(Pill, { selected: adminTab==="curriculum", onClick: function(){ setAdminTab("curriculum"); setCurriculumInstrument(null); } }, "커리큘럼")
       ),
       adminTab === "stats" ? h("div", { className: "card" },
         h("div", { className: "section-title" }, "유입 경로 통계"),
@@ -1602,7 +1646,7 @@ function App() {
                   borderRadius: "18px",
                   padding: "30px 8px",
                   textAlign: "center",
-                  boxShadow: "0 2px 10px rgba(23,150,138,0.08)"
+                  boxShadow: "0 6px 24px rgba(0,0,0,0.45)"
                 }
               },
                 h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
@@ -1629,7 +1673,7 @@ function App() {
             border: "1px solid " + TC.border,
             borderRadius: "18px",
             padding: isExpanded ? "22px" : "20px 22px",
-            boxShadow: "0 2px 10px rgba(23,150,138,0.08)"
+            boxShadow: "0 6px 24px rgba(0,0,0,0.45)"
           } },
             !isExpanded ? h("div", { style: { display: "flex", alignItems: "center", gap: "16px", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
                   t.photoUrl
@@ -1699,7 +1743,7 @@ function App() {
                     ),
                     h("div", { style: { display: "flex", gap: "8px", marginTop: "6px" } },
                       h("button", { type: "button", style: { flex: 1, padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, disabled: teacherSavingId === t.id, onClick: function(){ saveTeacher(t); setTeacherEditingId(null); } }, teacherSavingId === t.id ? "저장 중…" : "저장 후 보기로"),
-                      h("button", { type: "button", style: { flex: "0 0 auto", padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid #EBC6BC", background: "transparent", color: "var(--danger)", cursor: "pointer" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
+                      h("button", { type: "button", style: { flex: "0 0 auto", padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid rgba(232,131,122,0.35)", background: "transparent", color: "#E8837A", cursor: "pointer" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
                     )
                   )
                 : h(Frag, null,
@@ -1761,6 +1805,108 @@ function App() {
         })
         )
       )) : null,
+
+      adminTab === "pricing" ? h("div", { className: "card", style: { background: TC.bg, border: "1px solid " + TC.border } },
+        h("div", { className: "section-title", style: { color: TC.text } }, "학원비 안내 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
+        h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "20px" } }, "등록 유형별 수강료입니다."),
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
+          ["취미", "입시", "전문", "그룹"].map(function (type) {
+            var opts = priceOptionsFor(type);
+            return h("div", { key: type, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)" } },
+              h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" } },
+                h("div", { style: { width: "4px", height: "18px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
+                h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, type)
+              ),
+              opts.map(function (opt, idx) {
+                return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0", borderBottom: idx < opts.length - 1 ? "1px solid " + TC.border : "none" } },
+                  h("span", { style: { fontSize: "14px", color: TC.textMuted } }, opt.key + (opt.note ? " · " + opt.note : "")),
+                  h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
+                );
+              })
+            );
+          })
+        ),
+        h("div", { style: { marginTop: "18px", background: TC.surface2, border: "1px solid " + TC.border, borderRadius: "16px", padding: "18px" } },
+          h("div", { style: { fontSize: "13px", fontWeight: 800, color: TC.accentBright, marginBottom: "10px" } }, "할인 안내"),
+          DISCOUNT_OPTIONS.map(function (d, idx) {
+            return h("div", { key: idx, style: { fontSize: "12.5px", color: TC.textMuted, lineHeight: "1.7" } }, "• " + d.desc);
+          }),
+          h("div", { style: { fontSize: "11.5px", color: TC.textFaint, marginTop: "10px" } }, "* 3개월(12회) 등록, 그룹 레슨은 이미 할인된 요금이라 추가 할인이 적용되지 않으며, 중복 할인은 불가합니다.")
+        )
+      ) : null,
+
+      adminTab === "curriculum" ? h("div", { className: "card", style: { background: TC.bg, border: "1px solid " + TC.border } },
+        h("div", { className: "section-title", style: { color: TC.text } }, "커리큘럼 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
+        curriculumError ? h("div", { className: "error-banner" }, curriculumError) : null,
+        !curriculumInstrument ? h(Frag, null,
+          h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "18px" } }, "악기를 선택하면 해당 커리큘럼을 볼 수 있어요."),
+          h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" } },
+            ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
+              return h("div", {
+                key: i,
+                onClick: function(){ setCurriculumInstrument(i); setCurriculumEditing(false); },
+                style: { cursor: "pointer", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "30px 8px", textAlign: "center", boxShadow: "0 6px 24px rgba(0,0,0,0.45)" }
+              },
+                h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
+              );
+            })
+          )
+        ) : (function () {
+          var cur = curriculumData[curriculumInstrument];
+          var stages = (cur && cur.stages) || [];
+          return h(Frag, null,
+            h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" } },
+              h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setCurriculumInstrument(null); setCurriculumEditing(false); } }, "← 악기 목록으로"),
+              h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, curriculumInstrument, " 커리큘럼")
+            ),
+            curriculumLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)" } },
+              !curriculumEditing
+                ? h(Frag, null,
+                    stages.length === 0 ? h("div", { style: { padding: "20px 4px", textAlign: "center", color: TC.textFaint, fontSize: "13px" } }, "아직 등록된 커리큘럼이 없어요.") : null,
+                    stages.map(function (s, idx) {
+                      return h("div", { key: idx, style: { marginBottom: idx < stages.length - 1 ? "20px" : "0" } },
+                        h(TeacherSectionLabel, null, s.title || ("단계 " + (idx + 1))),
+                        h("div", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7", paddingLeft: "12px", whiteSpace: "pre-wrap" } }, s.description)
+                      );
+                    }),
+                    h("button", { type: "button", style: { width: "100%", marginTop: "18px", padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "1.5px solid " + TC.accentSoft, cursor: "pointer", background: TC.accentSoft, color: TC.accentBright }, onClick: function(){ setCurriculumEditing(true); } }, "커리큘럼 수정")
+                  )
+                : h("div", { className: "teacher-edit-compact" },
+                    stages.map(function (s, idx) {
+                      return h("div", { key: idx, style: { marginBottom: "14px", paddingBottom: "14px", borderBottom: "1px solid " + TC.border } },
+                        h("div", { className: "field" },
+                          h("label", null, "단계 제목"),
+                          h("input", { type: "text", placeholder: "예: 1단계 · 기초", value: s.title, onChange: function(e){
+                            var next = stages.slice(); next[idx] = Object.assign({}, next[idx], { title: e.target.value });
+                            setCurriculumData(function (prev) { var p = Object.assign({}, prev); p[curriculumInstrument] = { stages: next }; return p; });
+                          } })
+                        ),
+                        h("div", { className: "field" },
+                          h("label", null, "내용"),
+                          h("textarea", { rows: 3, style: { width: "100%", padding: "9px 10px", fontSize: "13px", borderRadius: "9px", border: "1.5px solid var(--rule)", fontFamily: "inherit" }, value: s.description, onChange: function(e){
+                            var next = stages.slice(); next[idx] = Object.assign({}, next[idx], { description: e.target.value });
+                            setCurriculumData(function (prev) { var p = Object.assign({}, prev); p[curriculumInstrument] = { stages: next }; return p; });
+                          } })
+                        ),
+                        h("button", { type: "button", className: "link-btn", style: { color: "#E8837A" }, onClick: function(){
+                          var next = stages.slice(); next.splice(idx, 1);
+                          setCurriculumData(function (prev) { var p = Object.assign({}, prev); p[curriculumInstrument] = { stages: next }; return p; });
+                        } }, "이 단계 삭제")
+                      );
+                    }),
+                    h("button", { type: "button", className: "btn ghost", style: { width: "100%", marginBottom: "12px" }, onClick: function(){
+                      var next = stages.concat([{ title: "", description: "" }]);
+                      setCurriculumData(function (prev) { var p = Object.assign({}, prev); p[curriculumInstrument] = { stages: next }; return p; });
+                    } }, "+ 단계 추가"),
+                    h("div", { style: { display: "flex", gap: "8px" } },
+                      h("button", { type: "button", style: { flex: 1, padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, disabled: curriculumSaving, onClick: function(){ saveCurriculum(curriculumInstrument, stages); } }, curriculumSaving ? "저장 중…" : "저장"),
+                      h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: function(){ setCurriculumEditing(false); } }, "취소")
+                    )
+                  )
+            )
+          );
+        })()
+      ) : null,
       h("div", { className: "nav-row" },
         h("button", { type: "button", className: "btn ghost", onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
       ),
