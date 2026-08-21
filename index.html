@@ -474,8 +474,6 @@ if (FIREBASE_CONFIGURED) {
 /* =========================================================================
    학원 원칙 / 환불 규정 — 원장님과 확정한 문구입니다.
 ========================================================================= */
-var INSTRUMENT_MONOGRAM = { "보컬": "Vo", "기타": "Gt", "베이스": "Ba", "드럼": "Dr", "피아노": "Pn", "작곡(미디)": "Cp" };
-
 // "드럼 연습실" 앱과 톤을 맞춘 색상 — 선생님 프로필 탭 전용
 var TC = {
   bg: "#F0F9F8",
@@ -670,6 +668,13 @@ function Pill(props) {
     className: "pill " + (selected ? "selected" : "") + " " + (wide ? "wide" : "") + " " + (disabled ? "disabled" : ""),
     onClick: disabled ? undefined : onClick,
   }, children);
+}
+
+function TeacherSectionLabel(props) {
+  return h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" } },
+    h("div", { style: { width: "4px", height: "16px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
+    h("div", { style: { fontSize: "14.5px", fontWeight: 800, color: TC.text } }, props.children)
+  );
 }
 
 function EditableLines(props) {
@@ -1003,7 +1008,7 @@ function App() {
   }, [adminTab, authUser]);
 
   function emptyTeacher() {
-    return { name: "", role: "", instruments: [], education: "", career: [], lessonHistory: [], lessonDays: "", photoPath: "", photoUrl: "" };
+    return { name: "", role: "", instruments: [], education: "", career: [], examResults: [], lessonHistory: [], lessonDays: "", photoPath: "", photoUrl: "" };
   }
 
   function addTeacher(seed) {
@@ -1504,7 +1509,6 @@ function App() {
           h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "18px" } }, "악기를 선택하면 담당 선생님을 볼 수 있어요."),
           h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" } },
             ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
-              var count = teachers.filter(function (t) { return (t.instruments || []).indexOf(i) !== -1; }).length;
               return h("div", {
                 key: i,
                 onClick: function(){ setTeacherInstrumentFilter(i); },
@@ -1513,34 +1517,19 @@ function App() {
                   background: TC.surface,
                   border: "1px solid " + TC.border,
                   borderRadius: "18px",
-                  padding: "24px 8px 20px",
+                  padding: "30px 8px",
                   textAlign: "center",
                   boxShadow: "0 2px 10px rgba(23,150,138,0.08)"
                 }
               },
-                h("div", { style: {
-                  width: "54px", height: "54px", borderRadius: "50%", margin: "0 auto 12px",
-                  background: "linear-gradient(135deg, " + TC.accent + ", " + TC.accentBright + ")",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontWeight: 700, fontSize: "16px", letterSpacing: "0.02em"
-                } }, INSTRUMENT_MONOGRAM[i]),
-                h("div", { style: { fontWeight: 700, fontSize: "14.5px", color: TC.text } }, i),
-                h("div", { style: { fontSize: "11px", color: count ? TC.accentBright : TC.textFaint, marginTop: "4px", fontWeight: count ? 700 : 400 } }, count ? count + "명 등록됨" : "미등록")
+                h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
               );
             })
           )
         ) : h(Frag, null,
           h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" } },
             h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setTeacherInstrumentFilter(null); setTeacherEditingId(null); } }, "← 악기 목록으로"),
-            h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-              h("div", { style: {
-                width: "30px", height: "30px", borderRadius: "50%",
-                background: "linear-gradient(135deg, " + TC.accent + ", " + TC.accentBright + ")",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontWeight: 700, fontSize: "11px"
-              } }, INSTRUMENT_MONOGRAM[teacherInstrumentFilter]),
-              h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, teacherInstrumentFilter, " 선생님")
-            )
+            h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, teacherInstrumentFilter, " 선생님")
           ),
           h("div", { style: { marginBottom: "18px" } },
             h("button", { type: "button", style: { width: "100%", padding: "15px 18px", borderRadius: "12px", fontSize: "15.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){ addTeacher({ instruments: [teacherInstrumentFilter] }); } }, "+ 새 선생님 추가")
@@ -1548,24 +1537,25 @@ function App() {
           teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).length === 0
             ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
             : null,
-          h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
+          h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
           teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).map(function (t) {
           var isExpanded = expandedTeacherId === t.id;
           var isEditing = teacherEditingId === t.id;
           return h("div", { key: t.id, style: {
-            gridColumn: isExpanded ? "1 / -1" : "auto",
             background: TC.surface,
             border: "1px solid " + TC.border,
             borderRadius: "18px",
-            padding: isExpanded ? "22px" : "26px 16px 20px",
+            padding: isExpanded ? "22px" : "20px 22px",
             boxShadow: "0 2px 10px rgba(23,150,138,0.08)"
           } },
-            !isExpanded ? h("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
+            !isExpanded ? h("div", { style: { display: "flex", alignItems: "center", gap: "16px", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
                   t.photoUrl
-                    ? h("img", { src: t.photoUrl, style: { width: "88px", height: "88px", borderRadius: "50%", objectFit: "cover", marginBottom: "14px", border: "3px solid " + TC.accentSoft } })
-                    : h("div", { style: { width: "88px", height: "88px", borderRadius: "50%", background: TC.surface2, marginBottom: "14px", display: "flex", alignItems: "center", justifyContent: "center", color: TC.accentBright, fontWeight: 700, fontSize: "22px" } }, INSTRUMENT_MONOGRAM[teacherInstrumentFilter]),
-                  h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, t.name || "(이름 없음)"),
-                  t.role ? h("span", { style: { marginTop: "8px", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : h("div", { style: { fontSize: "12px", color: TC.textFaint, marginTop: "8px" } }, "탭하여 프로필 작성")
+                    ? h("img", { src: t.photoUrl, style: { width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto", border: "3px solid " + TC.accentSoft } })
+                    : h("div", { style: { width: "72px", height: "72px", borderRadius: "50%", background: TC.surface2, flex: "0 0 auto" } }),
+                  h("div", { style: { flex: 1 } },
+                    h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "17px" } }, t.name || "(이름 없음)"),
+                    t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : h("div", { style: { fontSize: "12px", color: TC.textFaint, marginTop: "6px" } }, "탭하여 프로필 작성")
+                  )
                 )
               : (isEditing
                 ? h(Frag, null,
@@ -1621,6 +1611,7 @@ function App() {
                       h("input", { type: "text", value: t.education, onChange: function(e){ updateTeacherLocal(t.id, { education: e.target.value }); } })
                     ),
                     h(EditableLines, { label: "경력사항", lines: t.career, onChange: function(next){ updateTeacherLocal(t.id, { career: next }); } }),
+                    h(EditableLines, { label: "합격 실적", lines: t.examResults, onChange: function(next){ updateTeacherLocal(t.id, { examResults: next }); } }),
                     h(EditableLines, { label: "레슨이력", lines: t.lessonHistory, onChange: function(next){ updateTeacherLocal(t.id, { lessonHistory: next }); } }),
                     h("div", { className: "field" },
                       h("label", null, "레슨가능요일"),
@@ -1635,32 +1626,53 @@ function App() {
                     h("div", { style: { display: "flex", alignItems: "center", gap: "14px", marginBottom: "18px", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(null); } },
                       t.photoUrl
                         ? h("img", { src: t.photoUrl, style: { width: "64px", height: "64px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto", border: "3px solid " + TC.accentSoft } })
-                        : h("div", { style: { width: "64px", height: "64px", borderRadius: "50%", background: TC.surface2, flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", color: TC.accentBright, fontWeight: 700, fontSize: "18px" } }, INSTRUMENT_MONOGRAM[teacherInstrumentFilter]),
+                        : h("div", { style: { width: "64px", height: "64px", borderRadius: "50%", background: TC.surface2, flex: "0 0 auto" } }),
                       h("div", { style: { flex: 1 } },
                         h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "18px" } }, t.name || "(이름 없음)"),
                         t.role ? h("span", { style: { marginTop: "4px", display: "inline-block", fontSize: "11.5px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : null
                       ),
                       h("span", { style: { fontSize: "12px", color: TC.textMuted } }, "접기 ▲")
                     ),
-                    t.education ? h("div", { style: { marginBottom: "16px" } },
-                      h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, letterSpacing: "0.05em", marginBottom: "6px" } }, "학력사항"),
-                      h("div", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.6" } }, t.education)
+                    t.education ? h("div", { style: { marginBottom: "22px" } },
+                      h(TeacherSectionLabel, null, "학력사항"),
+                      h("div", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.6", paddingLeft: "12px" } }, t.education)
                     ) : null,
-                    (t.career && t.career.length) ? h("div", { style: { marginBottom: "16px" } },
-                      h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, letterSpacing: "0.05em", marginBottom: "6px" } }, "경력사항"),
-                      t.career.filter(Boolean).map(function (line, idx) {
-                        return h("div", { key: idx, style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, "· " + line);
-                      })
+                    (t.career && t.career.length) ? h("div", { style: { marginBottom: "22px" } },
+                      h(TeacherSectionLabel, null, "경력사항"),
+                      h("div", { style: { paddingLeft: "12px" } },
+                        t.career.filter(Boolean).map(function (line, idx) {
+                          return h("div", { key: idx, style: { display: "flex", gap: "8px", fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } },
+                            h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
+                            h("span", null, line)
+                          );
+                        })
+                      )
                     ) : null,
-                    (t.lessonHistory && t.lessonHistory.length) ? h("div", { style: { marginBottom: "16px" } },
-                      h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, letterSpacing: "0.05em", marginBottom: "6px" } }, "레슨이력"),
-                      t.lessonHistory.filter(Boolean).map(function (line, idx) {
-                        return h("div", { key: idx, style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, "· " + line);
-                      })
+                    (t.examResults && t.examResults.length) ? h("div", { style: { marginBottom: "22px" } },
+                      h(TeacherSectionLabel, null, "합격 실적"),
+                      h("div", { style: { paddingLeft: "12px" } },
+                        t.examResults.filter(Boolean).map(function (line, idx) {
+                          return h("div", { key: idx, style: { display: "flex", gap: "8px", fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } },
+                            h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
+                            h("span", null, line)
+                          );
+                        })
+                      )
                     ) : null,
-                    t.lessonDays ? h("div", { style: { marginBottom: "20px" } },
-                      h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, letterSpacing: "0.05em", marginBottom: "6px" } }, "레슨가능요일"),
-                      h("div", { style: { fontSize: "13.5px", color: TC.text } }, t.lessonDays)
+                    (t.lessonHistory && t.lessonHistory.length) ? h("div", { style: { marginBottom: "22px" } },
+                      h(TeacherSectionLabel, null, "레슨이력"),
+                      h("div", { style: { paddingLeft: "12px" } },
+                        t.lessonHistory.filter(Boolean).map(function (line, idx) {
+                          return h("div", { key: idx, style: { display: "flex", gap: "8px", fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } },
+                            h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
+                            h("span", null, line)
+                          );
+                        })
+                      )
+                    ) : null,
+                    t.lessonDays ? h("div", { style: { marginBottom: "22px" } },
+                      h(TeacherSectionLabel, null, "레슨가능요일"),
+                      h("div", { style: { fontSize: "13.5px", color: TC.text, paddingLeft: "12px" } }, t.lessonDays)
                     ) : null,
                     h("button", { type: "button", style: { width: "100%", padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "1.5px solid " + TC.accentSoft, cursor: "pointer", background: TC.accentSoft, color: TC.accentBright }, onClick: function(){ setTeacherEditingId(t.id); } }, "프로필 수정")
                   )
