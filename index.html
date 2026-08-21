@@ -504,6 +504,7 @@ var TC = {
 
 var ACADEMY_RULES = [
   "레슨비는 반드시 선불입니다.",
+  "수강료가 미결제된 상태로 수업은 진행되지 않습니다.",
   "수업 당일 이전에 연락 주신 결석은 보강 수업으로 진행합니다.",
   "수업 당일에 연락 주신 결석은 당일결석으로, 수강 횟수에서 차감됩니다.",
   "수업 일정 연기(변경)는 월 1회 이하로 부탁드립니다.",
@@ -511,9 +512,10 @@ var ACADEMY_RULES = [
 ];
 
 // 각 원칙 문구에서 밑줄로 강조할 구간 (ACADEMY_RULES와 순서가 같아야 합니다)
-// 첫 번째 항목("레슨비는 반드시 선불입니다.")은 문장 전체를 굵게 강조합니다 (별도 처리, 아래 참고).
+// "BOLD"로 지정한 항목은 밑줄 대신 문장 전체를 굵게 강조합니다 (아래 renderRuleContent 참고).
 var ACADEMY_RULE_EMPHASIS = [
-  [],
+  "BOLD",
+  "BOLD",
   ["수업 당일 이전", "보강 수업"],
   ["수업 당일", "당일결석", "수강 횟수", "차감"],
   ["일정 연기(변경)", "월 1회 이하"],
@@ -692,7 +694,7 @@ function underlineKeywords(text, keywords) {
 }
 
 function renderRuleContent(text, idx) {
-  if (idx === 0) {
+  if (ACADEMY_RULE_EMPHASIS[idx] === "BOLD") {
     return h("span", { className: "rule-emphasis-bold" }, text);
   }
   return underlineKeywords(text, ACADEMY_RULE_EMPHASIS[idx]);
