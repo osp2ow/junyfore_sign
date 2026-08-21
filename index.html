@@ -1846,7 +1846,7 @@ function App() {
                 return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0", borderBottom: idx < opts.length - 1 ? "1px solid " + TC.border : "none" } },
                   h("span", { style: { fontSize: "14px", color: TC.textMuted } }, opt.key + (opt.note ? " · " + opt.note : "")),
                   h("span", { style: { display: "flex", alignItems: "baseline", gap: "8px" } },
-                    builtIn > 0 ? h("span", { style: { fontSize: "13px", fontWeight: 700, color: "#B5573A" } }, "-" + formatKRW(builtIn)) : null,
+                    builtIn > 0 ? h("span", { style: { fontSize: "13px", fontWeight: 700, color: "#D32F2F" } }, "(-" + formatKRW(builtIn) + ")") : null,
                     h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
                   )
                 );
