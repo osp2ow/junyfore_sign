@@ -1477,26 +1477,27 @@ function App() {
   }
 
   if (mode === "adminLogin") {
-    return h("div", { className: "shell" },
-      h("div", { className: "header" },
-        h("div", { className: "brand" }, "주니퍼 실용음악학원"),
-        h("div", { className: "doc-title" }, "관 리 자")
-      ),
-      h("div", { className: "staff" }),
-      loginError ? h("div", { className: "error-banner" }, loginError) : null,
-      h("div", { className: "card" },
-        h("div", { className: "section-title" }, "관리자 로그인"),
-        h("div", { className: "field" },
-          h("label", null, "아이디"),
-          h("input", { type: "text", autoCapitalize: "off", autoCorrect: "off", value: loginEmail, onChange: function(e){ setLoginEmail(e.target.value); } })
+    return h("div", { style: { minHeight: "100vh", background: TC.bg } },
+      h("div", { style: { maxWidth: "460px", margin: "0 auto", padding: "60px 20px 80px" } },
+        h("div", { style: { textAlign: "center", marginBottom: "28px" } },
+          h("div", { style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 700, fontSize: "22px", color: TC.text } }, "주니퍼 실용음악학원"),
+          h("div", { style: { fontSize: "12px", letterSpacing: "0.24em", color: TC.textMuted, marginTop: "6px" } }, "관 리 자")
         ),
-        h("div", { className: "field" },
-          h("label", null, "비밀번호"),
-          h("input", { type: "password", value: loginPassword, onChange: function(e){ setLoginPassword(e.target.value); }, onKeyDown: function(e){ if (e.key === "Enter") handleAdminLogin(); } })
-        ),
-        h("div", { className: "nav-row" },
-          h("button", { type: "button", className: "btn ghost", onClick: function(){ setMode("form"); } }, "← 등록 원서로"),
-          h("button", { type: "button", className: "btn primary", disabled: loginBusy, onClick: handleAdminLogin }, loginBusy ? "로그인 중…" : "로그인")
+        loginError ? h("div", { className: "error-banner" }, loginError) : null,
+        h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "28px 24px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
+          h("div", { style: { fontSize: "15px", fontWeight: 700, color: TC.text, marginBottom: "18px" } }, "관리자 로그인"),
+          h("div", { style: { marginBottom: "14px" } },
+            h("label", { style: { display: "block", fontSize: "12.5px", fontWeight: 600, color: TC.textMuted, marginBottom: "6px" } }, "아이디"),
+            h("input", { type: "text", autoCapitalize: "off", autoCorrect: "off", style: { width: "100%", padding: "12px 14px", fontSize: "15px", borderRadius: "10px", border: "1.5px solid " + TC.border }, value: loginEmail, onChange: function(e){ setLoginEmail(e.target.value); } })
+          ),
+          h("div", { style: { marginBottom: "20px" } },
+            h("label", { style: { display: "block", fontSize: "12.5px", fontWeight: 600, color: TC.textMuted, marginBottom: "6px" } }, "비밀번호"),
+            h("input", { type: "password", style: { width: "100%", padding: "12px 14px", fontSize: "15px", borderRadius: "10px", border: "1.5px solid " + TC.border }, value: loginPassword, onChange: function(e){ setLoginPassword(e.target.value); }, onKeyDown: function(e){ if (e.key === "Enter") handleAdminLogin(); } })
+          ),
+          h("div", { style: { display: "flex", gap: "8px" } },
+            h("button", { type: "button", style: { flex: "0 0 auto", padding: "13px 16px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid " + TC.border, background: "transparent", color: TC.textMuted, cursor: "pointer" }, onClick: function(){ setMode("form"); } }, "← 등록 원서로"),
+            h("button", { type: "button", style: { flex: 1, padding: "13px 16px", borderRadius: "10px", fontSize: "14.5px", fontWeight: 700, border: "none", background: TC.accentBright, color: "#fff", cursor: "pointer" }, disabled: loginBusy, onClick: handleAdminLogin }, loginBusy ? "로그인 중…" : "로그인")
+          )
         )
       )
     );
@@ -1520,17 +1521,39 @@ function App() {
       return { label: s, count: enrollments.filter(function (e) { return e.source === s; }).length };
     });
     var maxSourceCount = Math.max(1, sourceCounts.reduce(function (m, c) { return Math.max(m, c.count); }, 0));
-    return h("div", { className: "shell", style: { maxWidth: "980px" } },
-      h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" } },
-        h("div", { className: "brand", style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 600, fontSize: "21px", color: "var(--juniper-deep)" } }, "등록 원서 목록"),
-        h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: handleAdminLogout }, "로그아웃")
+    var ADMIN_TABS = [
+      { key: "list", label: "목록" },
+      { key: "stats", label: "유입 경로 통계" },
+      { key: "teachers", label: "선생님 프로필" },
+      { key: "pricing", label: "학원비 안내" },
+      { key: "curriculum", label: "커리큘럼" },
+    ];
+    return h("div", { style: { minHeight: "100vh", background: TC.bg } },
+      h("div", { style: { maxWidth: "980px", margin: "0 auto", padding: "28px 20px 80px" } },
+      h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" } },
+        h("div", { style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 700, fontSize: "20px", color: TC.text } }, "등록 원서 목록"),
+        h("button", { type: "button", style: { padding: "9px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" }, onClick: handleAdminLogout }, "로그아웃")
       ),
-      h("div", { className: "pill-group", style: { marginBottom: "16px" } },
-        h(Pill, { selected: adminTab==="list", onClick: function(){ setAdminTab("list"); } }, "목록"),
-        h(Pill, { selected: adminTab==="stats", onClick: function(){ setAdminTab("stats"); } }, "유입 경로 통계"),
-        h(Pill, { selected: adminTab==="teachers", onClick: function(){ setAdminTab("teachers"); } }, "선생님 프로필"),
-        h(Pill, { selected: adminTab==="pricing", onClick: function(){ setAdminTab("pricing"); } }, "학원비 안내"),
-        h(Pill, { selected: adminTab==="curriculum", onClick: function(){ setAdminTab("curriculum"); setCurriculumInstrument(null); } }, "커리큘럼")
+      h("div", { style: { display: "flex", gap: "4px", borderBottom: "1px solid " + TC.border, marginBottom: "20px", overflowX: "auto" } },
+        ADMIN_TABS.map(function (tab) {
+          var active = adminTab === tab.key;
+          return h("button", {
+            key: tab.key,
+            type: "button",
+            onClick: function(){ setAdminTab(tab.key); if (tab.key === "curriculum") setCurriculumInstrument(null); },
+            style: {
+              padding: "12px 16px",
+              background: "none",
+              border: "none",
+              borderBottom: active ? "2px solid " + TC.accentBright : "2px solid transparent",
+              color: active ? TC.text : TC.textMuted,
+              fontWeight: active ? 700 : 600,
+              fontSize: "14px",
+              cursor: "pointer",
+              whiteSpace: "nowrap"
+            }
+          }, tab.label);
+        })
       ),
       adminTab === "stats" ? h("div", { className: "card" },
         h("div", { className: "section-title" }, "유입 경로 통계"),
@@ -1628,7 +1651,7 @@ function App() {
           );
         })
       ) : null,
-      adminTab === "teachers" ? h("div", { className: "card", style: { background: TC.bg, border: "1px solid " + TC.border } },
+      adminTab === "teachers" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
         h("div", { className: "section-title", style: { color: TC.text } }, "선생님 프로필 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
         teachersError ? h("div", { className: "error-banner" }, teachersError) : null,
         teachersLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : null,
@@ -1807,7 +1830,7 @@ function App() {
         )
       )) : null,
 
-      adminTab === "pricing" ? h("div", { className: "card", style: { background: TC.bg, border: "1px solid " + TC.border } },
+      adminTab === "pricing" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
         h("div", { className: "section-title", style: { color: TC.text } }, "학원비 안내 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
         h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "20px" } }, "등록 유형별 수강료입니다."),
         h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
@@ -1836,7 +1859,7 @@ function App() {
         )
       ) : null,
 
-      adminTab === "curriculum" ? h("div", { className: "card", style: { background: TC.bg, border: "1px solid " + TC.border } },
+      adminTab === "curriculum" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
         h("div", { className: "section-title", style: { color: TC.text } }, "커리큘럼 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
         curriculumError ? h("div", { className: "error-banner" }, curriculumError) : null,
         !curriculumInstrument ? h(Frag, null,
@@ -1909,11 +1932,12 @@ function App() {
           );
         })()
       ) : null,
-      h("div", { className: "nav-row" },
-        h("button", { type: "button", className: "btn ghost", onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
+      h("div", { style: { marginTop: "8px" } },
+        h("button", { type: "button", style: { width: "100%", padding: "13px 16px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" }, onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
       ),
       h("div", { ref: adminPrintRef, style: { position: "absolute", left: "-9999px", top: 0, width: "700px", background: "#ffffff", padding: "40px", fontFamily: "'PretendardVariable','Pretendard',sans-serif", color: "#232323" } },
         pdfRecord ? buildSummaryTree(pdfRecord) : null
+      )
       )
     );
   }
