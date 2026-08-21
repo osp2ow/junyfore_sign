@@ -488,18 +488,18 @@ if (FIREBASE_CONFIGURED) {
 /* =========================================================================
    학원 원칙 / 환불 규정 — 원장님과 확정한 문구입니다.
 ========================================================================= */
-// 상담 자료(선생님 프로필 · 학원비 안내 · 커리큘럼) 전용 — 다크 아카데미(차콜+골드) 톤
+// 상담 자료(선생님 프로필 · 학원비 안내 · 커리큘럼) 전용 — 화이트 베이스의 깔끔하고 전문적인 톤 (골드 포인트)
 var TC = {
-  bg: "#17181A",
-  surface: "#1F2124",
-  surface2: "#26282B",
-  border: "rgba(255,255,255,0.09)",
-  accent: "#C9A961",
-  accentBright: "#E8C97A",
-  accentSoft: "rgba(201,169,97,0.15)",
-  text: "#F5F1E8",
-  textMuted: "#B8B2A4",
-  textFaint: "#7A7568",
+  bg: "#FFFFFF",
+  surface: "#FFFFFF",
+  surface2: "#F8F6F0",
+  border: "#E6E1D3",
+  accent: "#B8945F",
+  accentBright: "#8A6A32",
+  accentSoft: "rgba(184,148,95,0.12)",
+  text: "#232323",
+  textMuted: "#6B6558",
+  textFaint: "#A39C8C",
 };
 
 var ACADEMY_RULES = [
@@ -1646,7 +1646,7 @@ function App() {
                   borderRadius: "18px",
                   padding: "30px 8px",
                   textAlign: "center",
-                  boxShadow: "0 6px 24px rgba(0,0,0,0.45)"
+                  boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)"
                 }
               },
                 h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
@@ -1673,7 +1673,7 @@ function App() {
             border: "1px solid " + TC.border,
             borderRadius: "18px",
             padding: isExpanded ? "22px" : "20px 22px",
-            boxShadow: "0 6px 24px rgba(0,0,0,0.45)"
+            boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)"
           } },
             !isExpanded ? h("div", { style: { display: "flex", alignItems: "center", gap: "16px", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
                   t.photoUrl
@@ -1743,7 +1743,7 @@ function App() {
                     ),
                     h("div", { style: { display: "flex", gap: "8px", marginTop: "6px" } },
                       h("button", { type: "button", style: { flex: 1, padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, disabled: teacherSavingId === t.id, onClick: function(){ saveTeacher(t); setTeacherEditingId(null); } }, teacherSavingId === t.id ? "저장 중…" : "저장 후 보기로"),
-                      h("button", { type: "button", style: { flex: "0 0 auto", padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid rgba(232,131,122,0.35)", background: "transparent", color: "#E8837A", cursor: "pointer" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
+                      h("button", { type: "button", style: { flex: "0 0 auto", padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid #EBC6BC", background: "transparent", color: "var(--danger)", cursor: "pointer" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
                     )
                   )
                 : h(Frag, null,
@@ -1812,7 +1812,7 @@ function App() {
         h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
           ["취미", "입시", "전문", "그룹"].map(function (type) {
             var opts = priceOptionsFor(type);
-            return h("div", { key: type, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)" } },
+            return h("div", { key: type, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
               h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" } },
                 h("div", { style: { width: "4px", height: "18px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
                 h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, type)
@@ -1845,7 +1845,7 @@ function App() {
               return h("div", {
                 key: i,
                 onClick: function(){ setCurriculumInstrument(i); setCurriculumEditing(false); },
-                style: { cursor: "pointer", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "30px 8px", textAlign: "center", boxShadow: "0 6px 24px rgba(0,0,0,0.45)" }
+                style: { cursor: "pointer", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "30px 8px", textAlign: "center", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" }
               },
                 h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
               );
@@ -1859,7 +1859,7 @@ function App() {
               h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setCurriculumInstrument(null); setCurriculumEditing(false); } }, "← 악기 목록으로"),
               h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, curriculumInstrument, " 커리큘럼")
             ),
-            curriculumLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)" } },
+            curriculumLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
               !curriculumEditing
                 ? h(Frag, null,
                     stages.length === 0 ? h("div", { style: { padding: "20px 4px", textAlign: "center", color: TC.textFaint, fontSize: "13px" } }, "아직 등록된 커리큘럼이 없어요.") : null,
@@ -1888,7 +1888,7 @@ function App() {
                             setCurriculumData(function (prev) { var p = Object.assign({}, prev); p[curriculumInstrument] = { stages: next }; return p; });
                           } })
                         ),
-                        h("button", { type: "button", className: "link-btn", style: { color: "#E8837A" }, onClick: function(){
+                        h("button", { type: "button", className: "link-btn", style: { color: "var(--danger)" }, onClick: function(){
                           var next = stages.slice(); next.splice(idx, 1);
                           setCurriculumData(function (prev) { var p = Object.assign({}, prev); p[curriculumInstrument] = { stages: next }; return p; });
                         } }, "이 단계 삭제")
