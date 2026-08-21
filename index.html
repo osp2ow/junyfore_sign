@@ -588,6 +588,13 @@ function formatPhone(v) {
   return digits.slice(0,3) + "-" + digits.slice(3,7) + "-" + digits.slice(7);
 }
 
+function formatBirthDate(v) {
+  var digits = v.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return digits.slice(0,4) + "." + digits.slice(4);
+  return digits.slice(0,4) + "." + digits.slice(4,6) + "." + digits.slice(6);
+}
+
 function summaryRow(label, value) {
   return h("div", { style: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #eee", fontSize: "13px", gap: "16px" } },
     h("span", { style: { color: "#5b5b52", flex: "0 0 auto" } }, label),
@@ -1241,7 +1248,7 @@ function App() {
 
   function validatePart1() {
     if (!form.name.trim()) return "이름을 입력해 주세요.";
-    if (!form.birthDate) return "생년월일을 입력해 주세요.";
+    if (form.birthDate.replace(/\D/g,"").length < 8) return "생년월일을 정확히 입력해 주세요.";
     if (!form.gender) return "성별을 선택해 주세요.";
     if (!form.ageGroup) return "청소년/성인 여부를 선택해 주세요.";
     if (!form.address.trim()) return "주소를 입력해 주세요.";
@@ -1763,13 +1770,6 @@ function App() {
         h("div", { className: "field" },
           h("label", null, "이름"),
           h("input", { type: "text", placeholder: "학생 이름", value: form.name, onChange: function(e){ set("name", e.target.value); } })
-        )
-      ),
-
-      h("div", { className: "row2" },
-        h("div", { className: "field" },
-          h("label", null, "생년월일"),
-          h("input", { type: "date", value: form.birthDate, onChange: function(e){ set("birthDate", e.target.value); } })
         ),
         h("div", { className: "field" },
           h("label", null, "성별"),
@@ -1781,16 +1781,27 @@ function App() {
         )
       ),
 
+      h("div", { className: "row2" },
+        h("div", { className: "field" },
+          h("label", null, "생년월일"),
+          h("input", { type: "text", inputMode: "numeric", placeholder: "1995.04.13", value: form.birthDate, onChange: function(e){ set("birthDate", formatBirthDate(e.target.value)); } })
+        ),
+        h("div", { className: "field" },
+          h("label", null, "본인 핸드폰 번호"),
+          h("input", { type: "tel", placeholder: "010-0000-0000", value: form.studentPhone, onChange: function(e){ set("studentPhone", formatPhone(e.target.value)); } })
+        )
+      ),
+
       h("div", { className: "field" },
         h("label", null, "청소년 / 성인"),
         h("div", { className: "block-group" },
-          ["청소년", "성인"].map(function (a) {
+          ["미성년자", "성인"].map(function (a) {
             return h(Pill, { key: a, wide: true, selected: form.ageGroup===a, onClick: function(){ set("ageGroup", a); } }, a);
           })
         )
       ),
 
-      form.ageGroup === "청소년" ? h(Frag, null,
+      form.ageGroup === "미성년자" ? h(Frag, null,
         h("div", { className: "row2" },
           h("div", { className: "field" },
             h("label", null, "아버지 성함"),
@@ -1822,11 +1833,6 @@ function App() {
           h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 120px" }, onClick: openAddressSearch }, "주소 검색"),
           h("input", { type: "text", placeholder: "상세 주소 (동/호수 등)", value: form.addressDetail, onChange: function(e){ set("addressDetail", e.target.value); } })
         )
-      ),
-
-      h("div", { className: "field" },
-        h("label", null, "본인 핸드폰 번호"),
-        h("input", { type: "tel", placeholder: "010-0000-0000", value: form.studentPhone, onChange: function(e){ set("studentPhone", formatPhone(e.target.value)); } })
       ),
 
       h("div", { className: "field" },
