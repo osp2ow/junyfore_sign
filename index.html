@@ -280,6 +280,10 @@
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
   }
+  .rule-emphasis-bold{
+    font-weight: 800;
+    color: #A34433;
+  }
   .refund-note{
     font-size: 11.5px;
     line-height:1.5;
@@ -499,6 +503,7 @@ var TC = {
 };
 
 var ACADEMY_RULES = [
+  "레슨비는 반드시 선불입니다.",
   "수업 당일 이전에 연락 주신 결석은 보강 수업으로 진행합니다.",
   "수업 당일에 연락 주신 결석은 수강 횟수에서 차감됩니다.",
   "수업 일정 연기(변경)는 월 1회 이하로 부탁드립니다.",
@@ -506,7 +511,9 @@ var ACADEMY_RULES = [
 ];
 
 // 각 원칙 문구에서 밑줄로 강조할 구간 (ACADEMY_RULES와 순서가 같아야 합니다)
+// 첫 번째 항목("레슨비는 반드시 선불입니다.")은 문장 전체를 굵게 강조합니다 (별도 처리, 아래 참고).
 var ACADEMY_RULE_EMPHASIS = [
+  [],
   ["수업 당일 이전", "보강 수업"],
   ["수업 당일", "수강 횟수", "차감"],
   ["일정 연기(변경)", "월 1회 이하"],
@@ -611,11 +618,15 @@ function buildSummaryTree(data) {
     ),
     summaryRow("등록 날짜", data.regDate),
     summaryRow("이름", data.name),
-    (data.fatherName || data.motherName) ? summaryRow("보호자 성함", [data.fatherName ? "아버지 " + data.fatherName : "", data.motherName ? "어머니 " + data.motherName : ""].filter(Boolean).join(" / ")) : null,
+    summaryRow("생년월일", data.birthDate),
     summaryRow("성별", data.gender),
+    summaryRow("구분", data.ageGroup),
+    data.fatherName ? summaryRow("아버지 성함", data.fatherName) : null,
+    data.fatherPhone ? summaryRow("아버지 전화번호", data.fatherPhone) : null,
+    data.motherName ? summaryRow("어머니 성함", data.motherName) : null,
+    data.motherPhone ? summaryRow("어머니 전화번호", data.motherPhone) : null,
     summaryRow("주소", ((data.address || "") + " " + (data.addressDetail || "")).trim()),
     summaryRow("본인 핸드폰", data.studentPhone),
-    data.parentPhone ? summaryRow("부모님 핸드폰" + (data.parentPhoneOwner ? " (" + data.parentPhoneOwner + ")" : ""), data.parentPhone) : null,
     summaryRow("유입 경로", data.source === "기타" ? ("기타 - " + data.sourceEtc) : data.source),
     summaryDivider(),
     isMultiLocal
@@ -637,7 +648,7 @@ function buildSummaryTree(data) {
     summaryDivider(),
     h("div", { key: "rules", style: { marginTop: "4px" } },
       h("div", { style: { fontSize: "12px", fontWeight: 700, color: "#1F3B2D", marginBottom: "6px" } }, "학원 원칙 (확인 및 동의함)"),
-      ACADEMY_RULES.map(function (r, idx) { return h("div", { key: idx, style: { fontSize: "12px", lineHeight: "1.6", color: "#232323" } }, "· ", underlineKeywords(r, ACADEMY_RULE_EMPHASIS[idx])); })
+      ACADEMY_RULES.map(function (r, idx) { return h("div", { key: idx, style: { fontSize: "12px", lineHeight: "1.6", color: "#232323" } }, "· ", renderRuleContent(r, idx)); })
     ),
     h("div", { key: "refund", style: { marginTop: "14px" } },
       h("div", { style: { fontSize: "12px", fontWeight: 700, color: "#1F3B2D", marginBottom: "6px" } }, "환불 규정 (확인 및 동의함)"),
@@ -663,6 +674,13 @@ function underlineKeywords(text, keywords) {
     }
     return part;
   });
+}
+
+function renderRuleContent(text, idx) {
+  if (idx === 0) {
+    return h("span", { className: "rule-emphasis-bold" }, text);
+  }
+  return underlineKeywords(text, ACADEMY_RULE_EMPHASIS[idx]);
 }
 
 function CheckIcon(props) {
@@ -844,14 +862,16 @@ function emptyForm() {
   return {
     regDate: todayStr(),
     name: "",
+    birthDate: "",
+    ageGroup: "",
     fatherName: "",
+    fatherPhone: "",
     motherName: "",
+    motherPhone: "",
     gender: "",
     address: "",
     addressDetail: "",
     studentPhone: "",
-    parentPhone: "",
-    parentPhoneOwner: "",
     source: "",
     sourceEtc: "",
     instrument: "",
@@ -1221,10 +1241,11 @@ function App() {
 
   function validatePart1() {
     if (!form.name.trim()) return "이름을 입력해 주세요.";
+    if (!form.birthDate) return "생년월일을 입력해 주세요.";
     if (!form.gender) return "성별을 선택해 주세요.";
+    if (!form.ageGroup) return "청소년/성인 여부를 선택해 주세요.";
     if (!form.address.trim()) return "주소를 입력해 주세요.";
     if (form.studentPhone.replace(/\D/g,"").length < 9) return "본인 핸드폰 번호를 확인해 주세요.";
-    if (form.parentPhone && form.parentPhone.replace(/\D/g,"").length < 9) return "부모님 핸드폰 번호를 확인해 주세요.";
     if (!form.source) return "유입 경로를 선택해 주세요.";
     if (form.source === "기타" && !form.sourceEtc.trim()) return "유입 경로(기타)를 입력해 주세요.";
     return "";
@@ -1471,11 +1492,15 @@ function App() {
               )
             ),
             isExpanded ? h("div", { style: { marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--rule)" } },
+              summaryRow("생년월일", rec.birthDate),
               summaryRow("성별", rec.gender),
+              summaryRow("구분", rec.ageGroup),
               summaryRow("주소", ((rec.address || "") + " " + (rec.addressDetail || "")).trim()),
               summaryRow("본인 핸드폰", rec.studentPhone),
-              rec.parentPhone ? summaryRow("부모님 핸드폰" + (rec.parentPhoneOwner ? " (" + rec.parentPhoneOwner + ")" : ""), rec.parentPhone) : null,
-              (rec.fatherName || rec.motherName) ? summaryRow("보호자 성함", [rec.fatherName ? "아버지 " + rec.fatherName : "", rec.motherName ? "어머니 " + rec.motherName : ""].filter(Boolean).join(" / ")) : null,
+              rec.fatherName ? summaryRow("아버지 성함", rec.fatherName) : null,
+              rec.fatherPhone ? summaryRow("아버지 전화번호", rec.fatherPhone) : null,
+              rec.motherName ? summaryRow("어머니 성함", rec.motherName) : null,
+              rec.motherPhone ? summaryRow("어머니 전화번호", rec.motherPhone) : null,
               summaryRow("유입 경로", rec.source === "기타" ? ("기타 - " + rec.sourceEtc) : rec.source),
               rec.discountType ? summaryRow("할인 유형", rec.discountType) : null,
               (rec.discountType === "가족할인" && rec.familyMemberName) ? summaryRow("가족 관계 수강생", rec.familyMemberName) : null,
@@ -1741,22 +1766,52 @@ function App() {
         )
       ),
 
-      h("div", { className: "field" },
-        h("label", null, "보호자 성함 ", h("span", { className: "hint" }, "미성년자의 경우 입력해주세요")),
-        h("div", { className: "row2" },
-          h("input", { type: "text", placeholder: "아버지 성함", style: { flex: 1 }, value: form.fatherName, onChange: function(e){ set("fatherName", e.target.value); } }),
-          h("input", { type: "text", placeholder: "어머니 성함", style: { flex: 1 }, value: form.motherName, onChange: function(e){ set("motherName", e.target.value); } })
+      h("div", { className: "row2" },
+        h("div", { className: "field" },
+          h("label", null, "생년월일"),
+          h("input", { type: "date", value: form.birthDate, onChange: function(e){ set("birthDate", e.target.value); } })
+        ),
+        h("div", { className: "field" },
+          h("label", null, "성별"),
+          h("div", { className: "pill-group" },
+            ["남", "여"].map(function (g) {
+              return h(Pill, { key: g, selected: form.gender===g, onClick: function(){ set("gender", g); } }, g);
+            })
+          )
         )
       ),
 
       h("div", { className: "field" },
-        h("label", null, "성별"),
-        h("div", { className: "pill-group" },
-          ["남", "여"].map(function (g) {
-            return h(Pill, { key: g, selected: form.gender===g, onClick: function(){ set("gender", g); } }, g);
+        h("label", null, "청소년 / 성인"),
+        h("div", { className: "block-group" },
+          ["청소년", "성인"].map(function (a) {
+            return h(Pill, { key: a, wide: true, selected: form.ageGroup===a, onClick: function(){ set("ageGroup", a); } }, a);
           })
         )
       ),
+
+      form.ageGroup === "청소년" ? h(Frag, null,
+        h("div", { className: "row2" },
+          h("div", { className: "field" },
+            h("label", null, "아버지 성함"),
+            h("input", { type: "text", value: form.fatherName, onChange: function(e){ set("fatherName", e.target.value); } })
+          ),
+          h("div", { className: "field" },
+            h("label", null, "아버지 전화번호"),
+            h("input", { type: "tel", placeholder: "010-0000-0000", value: form.fatherPhone, onChange: function(e){ set("fatherPhone", formatPhone(e.target.value)); } })
+          )
+        ),
+        h("div", { className: "row2" },
+          h("div", { className: "field" },
+            h("label", null, "어머니 성함"),
+            h("input", { type: "text", value: form.motherName, onChange: function(e){ set("motherName", e.target.value); } })
+          ),
+          h("div", { className: "field" },
+            h("label", null, "어머니 전화번호"),
+            h("input", { type: "tel", placeholder: "010-0000-0000", value: form.motherPhone, onChange: function(e){ set("motherPhone", formatPhone(e.target.value)); } })
+          )
+        )
+      ) : null,
 
       h("div", { className: "field" },
         h("label", null, "주소"),
@@ -1772,18 +1827,6 @@ function App() {
       h("div", { className: "field" },
         h("label", null, "본인 핸드폰 번호"),
         h("input", { type: "tel", placeholder: "010-0000-0000", value: form.studentPhone, onChange: function(e){ set("studentPhone", formatPhone(e.target.value)); } })
-      ),
-
-      h("div", { className: "field" },
-        h("label", null, "부모님 핸드폰 번호"),
-        h("div", { className: "row2", style: { alignItems: "center" } },
-          h("input", { type: "tel", placeholder: "010-0000-0000", style: { flex: 1 }, value: form.parentPhone, onChange: function(e){ set("parentPhone", formatPhone(e.target.value)); } }),
-          h("div", { className: "pill-group", style: { flex: "0 0 auto", flexWrap: "nowrap", alignItems: "center" } },
-            ["부", "모"].map(function (p) {
-              return h(Pill, { key: p, selected: form.parentPhoneOwner===p, onClick: function(){ set("parentPhoneOwner", p); } }, p);
-            })
-          )
-        )
       ),
 
       h("div", { className: "field" },
@@ -1982,7 +2025,7 @@ function App() {
                 next[idx] = !next[idx];
                 set("rulesChecked", next);
               }
-            }, underlineKeywords(rule, ACADEMY_RULE_EMPHASIS[idx]));
+            }, renderRuleContent(rule, idx));
           })
         )
       ),
