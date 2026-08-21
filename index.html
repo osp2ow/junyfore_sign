@@ -724,18 +724,18 @@ function BirthDateInput(props) {
   var value = props.value || "";
   var onChange = props.onChange;
   var bd = splitBirthDate(value);
-  var subStyle = { border: "none", background: "transparent", padding: "0", borderRadius: "0", boxShadow: "none", textAlign: "center", fontSize: "16px", width: "100%" };
-  return h("div", { style: { display: "flex", alignItems: "center", gap: "4px", border: "1.5px solid var(--rule)", borderRadius: "12px", padding: "14px 10px", background: "#fff" } },
+  var subStyle = { border: "none", background: "transparent", padding: "0", borderRadius: "0", boxShadow: "none", textAlign: "center", fontSize: "16px", flex: "0 0 auto" };
+  return h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", border: "1.5px solid var(--rule)", borderRadius: "12px", padding: "14px 8px", background: "#fff", width: "100%" } },
     h("input", {
       type: "text", inputMode: "numeric", placeholder: "2000", maxLength: 4,
-      style: Object.assign({}, subStyle, { flex: "1.3" }),
+      style: Object.assign({}, subStyle, { width: "46px" }),
       value: bd.y,
       onChange: function (e) { onChange(joinBirthDate(e.target.value.replace(/\D/g, "").slice(0, 4), bd.m, bd.d)); }
     }),
     h("span", { style: { color: "var(--ink-soft)" } }, "."),
     h("input", {
       type: "text", inputMode: "numeric", placeholder: "01", maxLength: 2,
-      style: Object.assign({}, subStyle, { flex: "1" }),
+      style: Object.assign({}, subStyle, { width: "26px" }),
       value: bd.m,
       onChange: function (e) { onChange(joinBirthDate(bd.y, e.target.value.replace(/\D/g, "").slice(0, 2), bd.d)); },
       onBlur: function (e) { onChange(joinBirthDate(bd.y, padTwo(e.target.value), bd.d)); }
@@ -743,7 +743,7 @@ function BirthDateInput(props) {
     h("span", { style: { color: "var(--ink-soft)" } }, "."),
     h("input", {
       type: "text", inputMode: "numeric", placeholder: "01", maxLength: 2,
-      style: Object.assign({}, subStyle, { flex: "1" }),
+      style: Object.assign({}, subStyle, { width: "26px" }),
       value: bd.d,
       onChange: function (e) { onChange(joinBirthDate(bd.y, bd.m, e.target.value.replace(/\D/g, "").slice(0, 2))); },
       onBlur: function (e) { onChange(joinBirthDate(bd.y, bd.m, padTwo(e.target.value))); }
@@ -1809,14 +1809,15 @@ function App() {
         h("div", { className: "field" },
           h("label", null, "이름"),
           h("input", { type: "text", placeholder: "학생 이름", value: form.name, onChange: function(e){ set("name", e.target.value); } })
-        ),
-        h("div", { className: "field" },
-          h("label", null, "성별"),
-          h("div", { className: "pill-group" },
-            ["남", "여"].map(function (g) {
-              return h(Pill, { key: g, selected: form.gender===g, onClick: function(){ set("gender", g); } }, g);
-            })
-          )
+        )
+      ),
+
+      h("div", { className: "field" },
+        h("label", null, "성별"),
+        h("div", { className: "pill-group" },
+          ["남", "여"].map(function (g) {
+            return h(Pill, { key: g, selected: form.gender===g, onClick: function(){ set("gender", g); } }, g);
+          })
         )
       ),
 
