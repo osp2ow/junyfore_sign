@@ -1842,9 +1842,13 @@ function App() {
                 h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, type)
               ),
               opts.map(function (opt, idx) {
+                var builtIn = opt.key === "3개월(12회)" ? threeMonthBuiltInDiscount_for(type) : 0;
                 return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0", borderBottom: idx < opts.length - 1 ? "1px solid " + TC.border : "none" } },
                   h("span", { style: { fontSize: "14px", color: TC.textMuted } }, opt.key + (opt.note ? " · " + opt.note : "")),
-                  h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
+                  h("span", { style: { textAlign: "right" } },
+                    builtIn > 0 ? h("span", { style: { display: "block", fontSize: "12px", fontWeight: 700, color: "var(--danger)", marginBottom: "2px" } }, "-" + formatKRW(builtIn)) : null,
+                    h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
+                  )
                 );
               })
             );
