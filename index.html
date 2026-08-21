@@ -488,12 +488,12 @@ if (FIREBASE_CONFIGURED) {
 /* =========================================================================
    학원 원칙 / 환불 규정 — 원장님과 확정한 문구입니다.
 ========================================================================= */
-// 상담 자료(선생님 프로필 · 학원비 안내 · 커리큘럼) 전용 — 화이트 베이스의 깔끔하고 전문적인 톤 (골드 포인트)
+// 상담 자료(선생님 프로필 · 학원비 안내 · 커리큘럼) 전용 — 화이트 베이스 + "연습실예약" 앱 배경톤 (골드 포인트)
 var TC = {
-  bg: "#FFFFFF",
+  bg: "#F0F9F8",
   surface: "#FFFFFF",
-  surface2: "#F8F6F0",
-  border: "#E6E1D3",
+  surface2: "#F5FAF9",
+  border: "#E1EBE9",
   accent: "#B8945F",
   accentBright: "#8A6A32",
   accentSoft: "rgba(184,148,95,0.12)",
@@ -1520,7 +1520,7 @@ function App() {
       return { label: s, count: enrollments.filter(function (e) { return e.source === s; }).length };
     });
     var maxSourceCount = Math.max(1, sourceCounts.reduce(function (m, c) { return Math.max(m, c.count); }, 0));
-    return h("div", { className: "shell" },
+    return h("div", { className: "shell", style: { maxWidth: "980px" } },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" } },
         h("div", { className: "brand", style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 600, fontSize: "21px", color: "var(--juniper-deep)" } }, "등록 원서 목록"),
         h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: handleAdminLogout }, "로그아웃")
@@ -1634,7 +1634,7 @@ function App() {
         teachersLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : null,
         !teacherInstrumentFilter ? h(Frag, null,
           h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "18px" } }, "악기를 선택하면 담당 선생님을 볼 수 있어요."),
-          h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" } },
+          h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" } },
             ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
               return h("div", {
                 key: i,
@@ -1644,12 +1644,13 @@ function App() {
                   background: TC.surface,
                   border: "1px solid " + TC.border,
                   borderRadius: "18px",
-                  padding: "30px 8px",
+                  padding: "54px 12px",
                   textAlign: "center",
                   boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)"
                 }
               },
-                h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
+                h("div", { style: { fontWeight: 700, fontSize: "18px", color: TC.text } }, i),
+                h("div", { style: { fontSize: "12px", color: TC.textFaint, marginTop: "8px" } }, "담당 선생님 보기")
               );
             })
           )
@@ -1840,14 +1841,15 @@ function App() {
         curriculumError ? h("div", { className: "error-banner" }, curriculumError) : null,
         !curriculumInstrument ? h(Frag, null,
           h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "18px" } }, "악기를 선택하면 해당 커리큘럼을 볼 수 있어요."),
-          h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" } },
+          h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" } },
             ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
               return h("div", {
                 key: i,
                 onClick: function(){ setCurriculumInstrument(i); setCurriculumEditing(false); },
-                style: { cursor: "pointer", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "30px 8px", textAlign: "center", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" }
+                style: { cursor: "pointer", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "54px 12px", textAlign: "center", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" }
               },
-                h("div", { style: { fontWeight: 700, fontSize: "16px", color: TC.text } }, i)
+                h("div", { style: { fontWeight: 700, fontSize: "18px", color: TC.text } }, i),
+                h("div", { style: { fontSize: "12px", color: TC.textFaint, marginTop: "8px" } }, "커리큘럼 보기")
               );
             })
           )
