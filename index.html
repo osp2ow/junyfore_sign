@@ -531,6 +531,36 @@ var REFUND_POLICY = [
 var REFUND_POLICY_NOTE = "학원의 설립·운영 및 과외교습에 관한 법률 시행령 [별표 4] 교습비등 반환기준에 근거합니다";
 
 /* ---------------- Pricing ---------------- */
+var PRICING_GROUPS = [
+  {
+    title: "취미반",
+    instruments: "기타, 드럼, 피아노, 보컬, 베이스",
+    priceType: "취미",
+    notes: [
+      "레슨은 주 1회, 1대1 레슨으로 1시간동안 진행됩니다.",
+      "결제는 1개월 기준이 아닌 4회차 기준입니다.",
+    ],
+  },
+  {
+    title: "입시반 · 전문반",
+    instruments: "기타, 드럼, 피아노, 보컬, 베이스, 작곡",
+    priceType: "입시",
+    notes: [
+      "취미 작곡 레슨은 전문반으로 진행됩니다.",
+      "레슨은 주 1회, 1대1 레슨으로 1시간동안 진행됩니다.",
+      "결제는 1개월 기준이 아닌 4회차 기준입니다.",
+    ],
+  },
+  {
+    title: "그룹반",
+    instruments: "기타, 드럼, 피아노, 보컬, 베이스, 작곡",
+    priceType: "그룹",
+    notes: [
+      "그룹 수업은 최대 2인입니다.",
+    ],
+  },
+];
+
 var DISCOUNT_OPTIONS = [
   { key: "가족할인", amount: 10000, desc: "가족 할인 — 수강생 각 1만원 할인" },
   { key: "두과목 이상 할인", amount: 10000, desc: "두 과목 이상 수강 시 — 과목당 1만원 할인" },
@@ -1831,26 +1861,34 @@ function App() {
       )) : null,
 
       adminTab === "pricing" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
-        h("div", { className: "section-title", style: { color: TC.text } }, "학원비 안내 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
-        h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "20px" } }, "등록 유형별 수강료입니다."),
-        h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
-          ["취미", "입시", "전문", "그룹"].map(function (type) {
-            var opts = priceOptionsFor(type);
-            return h("div", { key: type, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
-              h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" } },
+        h("div", { style: { marginBottom: "22px" } },
+          h("span", { style: { display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "4px 12px", borderRadius: "999px", marginBottom: "8px" } }, "주니퍼 실용음악학원"),
+          h("div", { style: { fontSize: "24px", fontWeight: 800, color: TC.text } }, "레슨비 안내")
+        ),
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "16px" } },
+          PRICING_GROUPS.map(function (group) {
+            var opts = priceOptionsFor(group.priceType);
+            return h("div", { key: group.title, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
+              h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" } },
                 h("div", { style: { width: "4px", height: "18px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
-                h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, type)
+                h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, group.title)
               ),
+              h("div", { style: { fontSize: "12px", color: TC.textFaint, marginLeft: "14px", marginBottom: "16px" } }, group.instruments),
               opts.map(function (opt, idx) {
-                var builtIn = opt.key === "3개월(12회)" ? threeMonthBuiltInDiscount_for(type) : 0;
+                var builtIn = opt.key === "3개월(12회)" ? threeMonthBuiltInDiscount_for(group.priceType) : 0;
                 return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0", borderBottom: idx < opts.length - 1 ? "1px solid " + TC.border : "none" } },
                   h("span", { style: { fontSize: "14px", color: TC.textMuted } }, opt.key + (opt.note ? " · " + opt.note : "")),
                   h("span", { style: { display: "flex", alignItems: "baseline", gap: "8px" } },
-                    builtIn > 0 ? h("span", { style: { fontSize: "13px", fontWeight: 700, color: "#D32F2F" } }, "(-" + formatKRW(builtIn) + ")") : null,
+                    builtIn > 0 ? h("span", { style: { fontSize: "13px", fontWeight: 700, color: "#4A5A73" } }, "(-" + formatKRW(builtIn) + ")") : null,
                     h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
                   )
                 );
-              })
+              }),
+              h("div", { style: { marginTop: "14px", paddingTop: "14px", borderTop: "1px solid " + TC.border } },
+                group.notes.map(function (note, idx) {
+                  return h("div", { key: idx, style: { fontSize: "12px", color: TC.textFaint, lineHeight: "1.7" } }, "- " + note);
+                })
+              )
             );
           })
         ),
