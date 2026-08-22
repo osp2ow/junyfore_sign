@@ -724,6 +724,7 @@ function Pill(props) {
 function TeacherSectionLabel(props) {
   return h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" } },
     h("div", { style: { width: "4px", height: "16px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
+    props.icon ? h("span", { style: { fontSize: "15px" } }, props.icon) : null,
     h("div", { style: { fontSize: "14.5px", fontWeight: 800, color: TC.text } }, props.children)
   );
 }
@@ -762,11 +763,11 @@ function toPairArray(items) {
   });
 }
 
-function renderBulletSection(title, itemsRaw) {
+function renderBulletSection(title, itemsRaw, icon) {
   var items = toLineArray(itemsRaw);
   if (!items.filter(Boolean).length) return null;
   return h("div", { key: title, style: { marginBottom: "22px" } },
-    h(TeacherSectionLabel, null, title),
+    h(TeacherSectionLabel, { icon: icon }, title),
     h("div", { style: { paddingLeft: "12px" } },
       items.filter(Boolean).map(function (line, idx) {
         return h("div", { key: idx, style: { display: "flex", gap: "8px", fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } },
@@ -782,11 +783,16 @@ function renderExamResultsSection(itemsRaw) {
   var valid = toPairArray(itemsRaw).filter(function (it) { return it && (it.a || it.b); });
   if (!valid.length) return null;
   return h("div", { style: { marginBottom: "22px" } },
-    h(TeacherSectionLabel, null, "제자 입시 합격 결과"),
+    h(TeacherSectionLabel, { icon: "🏆" }, "제자 입시 합격 결과"),
     h("div", { style: { paddingLeft: "12px" } },
       valid.map(function (it, idx) {
-        return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: idx < valid.length - 1 ? "1px solid " + TC.border : "none", fontSize: "13.5px" } },
-          h("span", { style: { color: TC.text } }, it.a),
+        return h("div", { key: idx, style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", borderBottom: idx < valid.length - 1 ? "1px solid " + TC.border : "none", fontSize: "13.5px" } },
+          h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+            it.logoUrl
+              ? h("img", { src: it.logoUrl, style: { width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto" } })
+              : h("div", { style: { width: "22px", height: "22px", borderRadius: "50%", background: TC.surface2, flex: "0 0 auto" } }),
+            h("span", { style: { color: TC.text } }, it.a)
+          ),
           h("span", { style: { color: TC.textMuted, fontWeight: 700 } }, it.b)
         );
       })
@@ -798,7 +804,7 @@ function renderFeatureTiles(featuresRaw) {
   var valid = toPairArray(featuresRaw).filter(function (f) { return f && (f.a || f.b); });
   if (!valid.length) return null;
   return h("div", { style: { marginTop: "28px" } },
-    h(TeacherSectionLabel, null, "레슨 특징"),
+    h(TeacherSectionLabel, { icon: "🎵" }, "레슨 특징"),
     h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px", marginTop: "10px" } },
       valid.map(function (f, idx) {
         return h("div", { key: idx, style: { textAlign: "center", padding: "16px 10px", background: TC.surface2, borderRadius: "14px", border: "1px solid " + TC.border } },
@@ -839,6 +845,44 @@ function BirthDateInput(props) {
       onChange: function (e) { onChange(joinBirthDate(bd.y, bd.m, e.target.value.replace(/\D/g, "").slice(0, 2))); },
       onBlur: function (e) { onChange(joinBirthDate(bd.y, bd.m, padTwo(e.target.value))); }
     })
+  );
+}
+
+function EditableExamResults(props) {
+  var items = props.items || [], onChange = props.onChange, teacherId = props.teacherId, uploadingKey = props.uploadingKey, onUploadLogo = props.onUploadLogo;
+  return h("div", { className: "field" },
+    h("label", null, "제자 입시 합격 결과"),
+    items.map(function (item, idx) {
+      var isUploading = uploadingKey === (teacherId + "_" + idx);
+      return h("div", { key: idx, style: { display: "flex", gap: "6px", marginBottom: "8px", alignItems: "center" } },
+        item.logoUrl
+          ? h("img", { src: item.logoUrl, style: { width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto" } })
+          : h("div", { style: { width: "26px", height: "26px", borderRadius: "50%", background: "var(--rule)", flex: "0 0 auto" } }),
+        h("input", {
+          type: "file", accept: "image/*", style: { width: "64px", fontSize: "10px", flex: "0 0 auto" },
+          disabled: isUploading,
+          onChange: function (e) { var f = e.target.files && e.target.files[0]; if (f) onUploadLogo(idx, f); }
+        }),
+        h("input", {
+          type: "text", placeholder: "학교명", style: { flex: 2 },
+          value: item.a || "",
+          onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); }
+        }),
+        h("input", {
+          type: "text", placeholder: "연도", style: { flex: 1 },
+          value: item.b || "",
+          onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { b: e.target.value }); onChange(next); }
+        }),
+        h("button", {
+          type: "button", className: "link-btn", style: { color: "var(--danger)", flex: "0 0 auto" },
+          onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }
+        }, "삭제")
+      );
+    }),
+    h("button", {
+      type: "button", className: "btn ghost", style: { width: "100%" },
+      onClick: function () { onChange(items.concat([{ a: "", b: "", logoUrl: "", logoPath: "" }])); }
+    }, "+ 항목 추가")
   );
 }
 
@@ -1114,6 +1158,7 @@ function App() {
   var teacherEditingIdState = useState(null); var teacherEditingId = teacherEditingIdState[0], setTeacherEditingId = teacherEditingIdState[1];
   var teacherSavingIdState = useState(null); var teacherSavingId = teacherSavingIdState[0], setTeacherSavingId = teacherSavingIdState[1];
   var teacherPhotoUploadingIdState = useState(null); var teacherPhotoUploadingId = teacherPhotoUploadingIdState[0], setTeacherPhotoUploadingId = teacherPhotoUploadingIdState[1];
+  var examLogoUploadingKeyState = useState(null); var examLogoUploadingKey = examLogoUploadingKeyState[0], setExamLogoUploadingKey = examLogoUploadingKeyState[1];
 
   // ----- 커리큘럼 (관리자 전용) -----
   var curriculumInstrumentState = useState(null); var curriculumInstrument = curriculumInstrumentState[0], setCurriculumInstrument = curriculumInstrumentState[1];
@@ -1282,6 +1327,30 @@ function App() {
       setTeachersError("사진 업로드 중 오류가 발생했습니다: " + e.message);
     }).finally(function () {
       setTeacherPhotoUploadingId(null);
+    });
+  }
+
+  function uploadExamLogo(t, idx, file) {
+    if (!storage || !file) return;
+    var key = t.id + "_" + idx;
+    setExamLogoUploadingKey(key);
+    var path = "teachers/" + t.id + "_examlogo" + idx + "_" + Date.now() + ".jpg";
+    storage.ref(path).put(file).then(function () {
+      return storage.ref(path).getDownloadURL();
+    }).then(function (url) {
+      var items = toPairArray(t.examResults);
+      var oldPath = items[idx] && items[idx].logoPath;
+      var next = items.slice();
+      next[idx] = Object.assign({}, next[idx], { logoUrl: url, logoPath: path });
+      updateTeacherLocal(t.id, { examResults: next });
+      return db.collection("teachers").doc(t.id).set({ examResults: next }, { merge: true }).then(function () {
+        if (oldPath && storage) storage.ref(oldPath).delete().catch(function () {});
+      });
+    }).catch(function (e) {
+      console.error(e);
+      setTeachersError("학교 로고 업로드 중 오류가 발생했습니다: " + e.message);
+    }).finally(function () {
+      setExamLogoUploadingKey(null);
     });
   }
 
@@ -1891,7 +1960,7 @@ function App() {
                     h(EditableLines, { label: "출신학교", lines: toLineArray(t.education), onChange: function(next){ updateTeacherLocal(t.id, { education: next }); } }),
                     h(EditableLines, { label: "경력", lines: t.career, onChange: function(next){ updateTeacherLocal(t.id, { career: next }); } }),
                     h(EditableLines, { label: "이력", lines: t.lessonHistory, onChange: function(next){ updateTeacherLocal(t.id, { lessonHistory: next }); } }),
-                    h(EditablePairList, { label: "제자 입시 합격 결과", items: toPairArray(t.examResults), aLabel: "학교명", bLabel: "연도", onChange: function(next){ updateTeacherLocal(t.id, { examResults: next }); } }),
+                    h(EditableExamResults, { teacherId: t.id, items: toPairArray(t.examResults), uploadingKey: examLogoUploadingKey, onUploadLogo: function(idx, file){ uploadExamLogo(t, idx, file); }, onChange: function(next){ updateTeacherLocal(t.id, { examResults: next }); } }),
                     h(EditablePairList, { label: "레슨 특징", items: toPairArray(t.features), aLabel: "제목", bLabel: "부제", onChange: function(next){ updateTeacherLocal(t.id, { features: next }); } }),
                     h("div", { className: "field" },
                       h("label", null, "레슨가능요일"),
@@ -1907,9 +1976,9 @@ function App() {
                     renderTeacherHero(t),
                     h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "28px", marginTop: "28px" } },
                       h("div", null,
-                        renderBulletSection("출신학교", t.education),
-                        renderBulletSection("경력", t.career),
-                        renderBulletSection("이력", t.lessonHistory)
+                        renderBulletSection("출신학교", t.education, "🎓"),
+                        renderBulletSection("경력", t.career, "💼"),
+                        renderBulletSection("이력", t.lessonHistory, "📋")
                       ),
                       h("div", null,
                         renderExamResultsSection(t.examResults)
