@@ -777,6 +777,14 @@ function getSectionLayout(t) {
   return merged;
 }
 
+function moveItem(arr, idx, direction) {
+  var j = direction === "up" ? idx - 1 : idx + 1;
+  if (j < 0 || j >= arr.length) return arr;
+  var next = arr.slice();
+  var tmp = next[idx]; next[idx] = next[j]; next[j] = tmp;
+  return next;
+}
+
 function moveInColumn(layout, key, direction) {
   var idx = layout.findIndex(function (s) { return s.key === key; });
   if (idx === -1) return layout;
@@ -832,6 +840,13 @@ function renderTeacherHero(t, editing, onChange, onPhotoUpload, isPhotoUploading
 }
 
 // ----- 출신학교 / 경력 / 이력 (불릿 목록, 보기·편집 동일 배치) -----
+function tinyMoveButtons(arr, idx, onChange) {
+  return h(Frag, null,
+    h("button", { type: "button", onClick: function () { onChange(moveItem(arr, idx, "up")); }, style: { border: "none", background: "none", color: TC.textFaint, cursor: "pointer", fontSize: "11px", flex: "0 0 auto", padding: "0 2px" } }, "▲"),
+    h("button", { type: "button", onClick: function () { onChange(moveItem(arr, idx, "down")); }, style: { border: "none", background: "none", color: TC.textFaint, cursor: "pointer", fontSize: "11px", flex: "0 0 auto", padding: "0 2px" } }, "▼")
+  );
+}
+
 function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, moveUp, moveDown, cycleCol) {
   var items = toLineArray(itemsRaw);
   if (!editing && !items.filter(Boolean).length) return null;
@@ -844,6 +859,7 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
           editing
             ? h("input", { type: "text", value: line, style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = e.target.value; onChange(next); } })
             : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, line),
+          editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
       }),
@@ -867,6 +883,7 @@ function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, 
           editing
             ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
             : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, it.a),
+          editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
       }),
@@ -893,6 +910,7 @@ function renderInlineFeatureTiles(featuresRaw, editing, onChange) {
           editing
             ? h("input", { type: "text", placeholder: "부제", value: f.b || "", style: { width: "100%", textAlign: "center", border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "11px", color: TC.textFaint, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { b: e.target.value }); onChange(next); } })
             : h("div", { style: { fontSize: "11px", color: TC.textFaint, marginTop: "4px" } }, f.b),
+          editing ? h("div", { style: { position: "absolute", top: "4px", left: "6px", display: "flex" } }, tinyMoveButtons(items, idx, onChange)) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { position: "absolute", top: "4px", right: "6px", border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px" } }, "×") : null
         );
       }),
