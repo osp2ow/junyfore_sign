@@ -806,9 +806,17 @@ function cycleColumn(layout, key) {
 }
 
 // ----- 상단 사진+문구 (보기/편집 동일한 위치·배치) -----
+var DEFAULT_HERO_LAYOUT = {
+  role: { x: 6, y: 38, size: 13 },
+  name: { x: 6, y: 47, size: 28 },
+  englishTitle: { x: 6, y: 60, size: 12 },
+  quote: { x: 6, y: 72, size: 13 },
+};
+
 function TeacherHero(props) {
   var t = props.t, editing = props.editing, onChange = props.onChange, onPhotoUpload = props.onPhotoUpload, isPhotoUploading = props.isPhotoUploading;
   var gradState = useState(null); var grad = gradState[0], setGrad = gradState[1];
+  var panelRef = useRef(null);
 
   useEffect(function () {
     setGrad(null);
@@ -836,8 +844,59 @@ function TeacherHero(props) {
     img.src = t.photoUrl;
   }, [t.photoUrl]);
 
+  var heroLayout = Object.assign({}, DEFAULT_HERO_LAYOUT, t.heroLayout || {});
+  function updateLayout(key, patch) {
+    var next = Object.assign({}, heroLayout);
+    next[key] = Object.assign({}, next[key], patch);
+    onChange({ heroLayout: next });
+  }
+  function adjustSize(key, delta) {
+    var cur = heroLayout[key].size;
+    var next = Math.max(9, Math.min(60, cur + delta));
+    updateLayout(key, { size: next });
+  }
+  function startDrag(key) {
+    return function (e) {
+      if (!editing) return;
+      e.preventDefault();
+      var rect = panelRef.current.getBoundingClientRect();
+      function onMove(ev) {
+        var clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+        var clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+        var xPct = Math.min(92, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+        var yPct = Math.min(92, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
+        updateLayout(key, { x: xPct, y: yPct });
+      }
+      function onUp() {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        document.removeEventListener("touchmove", onMove);
+        document.removeEventListener("touchend", onUp);
+      }
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      document.addEventListener("touchmove", onMove, { passive: false });
+      document.addEventListener("touchend", onUp);
+    };
+  }
+
+  function draggableWrap(key, content) {
+    var pos = heroLayout[key];
+    return h("div", { key: key, style: { position: "absolute", left: pos.x + "%", top: pos.y + "%", maxWidth: "88%", display: "flex", alignItems: "center", gap: "6px", zIndex: 2 } },
+      editing ? h("span", {
+        onMouseDown: startDrag(key), onTouchStart: startDrag(key),
+        style: { cursor: "move", color: "rgba(255,255,255,0.55)", fontSize: "15px", userSelect: "none", flex: "0 0 auto" }
+      }, "⠿") : null,
+      content,
+      editing ? h("span", { style: { display: "flex", flexDirection: "column", flex: "0 0 auto" } },
+        h("button", { type: "button", onClick: function () { adjustSize(key, 2); }, style: { border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", cursor: "pointer", fontSize: "9px", padding: "1px 4px", borderRadius: "3px", marginBottom: "1px" } }, "+"),
+        h("button", { type: "button", onClick: function () { adjustSize(key, -2); }, style: { border: "none", background: "rgba(255,255,255,0.15)", color: "#fff", cursor: "pointer", fontSize: "9px", padding: "1px 4px", borderRadius: "3px" } }, "−")
+      ) : null
+    );
+  }
+
   var nameSpaced = (t.name || "").split("").join(" ");
-  var dashedInput = { background: "transparent", border: "none", borderBottom: "1px dashed rgba(255,255,255,0.4)", color: "#fff", textAlign: "left", width: "100%", padding: "2px 0", fontFamily: "inherit" };
+  var dashedInput = { background: "transparent", border: "none", borderBottom: "1px dashed rgba(255,255,255,0.4)", color: "#fff", textAlign: "left", padding: "2px 0", fontFamily: "inherit" };
   var rightBg = grad || "linear-gradient(135deg, #2b2b2b, #101010)";
 
   return h("div", { style: { display: "flex", borderRadius: "18px", overflow: "hidden", minHeight: "260px" } },
@@ -848,20 +907,23 @@ function TeacherHero(props) {
         h("input", { type: "file", accept: "image/*", style: { display: "none" }, disabled: isPhotoUploading, onChange: function (e) { var f = e.target.files && e.target.files[0]; if (f) onPhotoUpload(f); } })
       ) : null
     ),
-    h("div", { style: { flex: 1, background: rightBg, display: "flex", alignItems: "center", padding: "32px 28px" } },
-      h("div", { style: { textAlign: "left", color: "#fff", width: "100%" } },
-        editing
-          ? h("input", { type: "text", placeholder: "직책 (예: 드럼 강사)", value: t.role, onChange: function (e) { onChange({ role: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: "13px", letterSpacing: "0.15em", marginBottom: "8px" }) })
-          : (t.role ? h("div", { style: { fontSize: "13px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.75)", marginBottom: "8px" } }, t.role) : null),
-        editing
-          ? h("input", { type: "text", placeholder: "이름", value: t.name, onChange: function (e) { onChange({ name: e.target.value }); }, style: Object.assign({}, dashedInput, { fontSize: "26px", fontWeight: 800, letterSpacing: "0.06em" }) })
-          : h("div", { style: { fontSize: "28px", fontWeight: 800, letterSpacing: "0.06em" } }, nameSpaced || "이름 미입력"),
-        editing
-          ? h("input", { type: "text", placeholder: "영문 타이틀 (예: DRUM TEACHER)", value: t.englishTitle, onChange: function (e) { onChange({ englishTitle: e.target.value }); }, style: Object.assign({}, dashedInput, { color: TC.accentBright, fontSize: "12px", letterSpacing: "0.3em", fontWeight: 700, marginTop: "8px" }) })
-          : (t.englishTitle ? h("div", { style: { fontSize: "12px", letterSpacing: "0.3em", color: TC.accentBright, marginTop: "8px", fontWeight: 700 } }, t.englishTitle) : null),
-        editing
-          ? h("textarea", { rows: 2, placeholder: "소개 문구 (2줄 정도)", value: t.quote, onChange: function (e) { onChange({ quote: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: "13px", lineHeight: "1.8", marginTop: "18px", resize: "vertical" }) })
-          : (t.quote ? h("div", { style: { marginTop: "18px", fontSize: "13px", color: "rgba(255,255,255,0.85)", lineHeight: "1.8", whiteSpace: "pre-line" } }, t.quote) : null)
+    h("div", { ref: panelRef, style: { flex: 1, background: rightBg, position: "relative" } },
+      editing ? h("button", { type: "button", onClick: function () { onChange({ heroLayout: DEFAULT_HERO_LAYOUT }); }, style: { position: "absolute", top: "8px", right: "8px", zIndex: 3, border: "none", background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", cursor: "pointer", fontSize: "10px", padding: "4px 8px", borderRadius: "6px" } }, "위치 초기화") : null,
+      draggableWrap("role", editing
+        ? h("input", { type: "text", placeholder: "직책 (예: 드럼 강사)", value: t.role, onChange: function (e) { onChange({ role: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: heroLayout.role.size + "px", letterSpacing: "0.15em", width: "220px" }) })
+        : (t.role ? h("div", { style: { fontSize: heroLayout.role.size + "px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" } }, t.role) : null)
+      ),
+      draggableWrap("name", editing
+        ? h("input", { type: "text", placeholder: "이름", value: t.name, onChange: function (e) { onChange({ name: e.target.value }); }, style: Object.assign({}, dashedInput, { fontSize: heroLayout.name.size + "px", fontWeight: 800, letterSpacing: "0.06em", width: "260px" }) })
+        : h("div", { style: { fontSize: heroLayout.name.size + "px", fontWeight: 800, letterSpacing: "0.06em", color: "#fff", whiteSpace: "nowrap" } }, nameSpaced || "이름 미입력")
+      ),
+      draggableWrap("englishTitle", editing
+        ? h("input", { type: "text", placeholder: "영문 타이틀 (예: DRUM TEACHER)", value: t.englishTitle, onChange: function (e) { onChange({ englishTitle: e.target.value }); }, style: Object.assign({}, dashedInput, { color: TC.accentBright, fontSize: heroLayout.englishTitle.size + "px", letterSpacing: "0.3em", fontWeight: 700, width: "260px" }) })
+        : (t.englishTitle ? h("div", { style: { fontSize: heroLayout.englishTitle.size + "px", letterSpacing: "0.3em", color: TC.accentBright, fontWeight: 700, whiteSpace: "nowrap" } }, t.englishTitle) : null)
+      ),
+      draggableWrap("quote", editing
+        ? h("textarea", { rows: 2, placeholder: "소개 문구 (2줄 정도)", value: t.quote, onChange: function (e) { onChange({ quote: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: heroLayout.quote.size + "px", lineHeight: "1.8", resize: "vertical", width: "260px" }) })
+        : (t.quote ? h("div", { style: { fontSize: heroLayout.quote.size + "px", color: "rgba(255,255,255,0.85)", lineHeight: "1.8", whiteSpace: "pre-line" } }, t.quote) : null)
       )
     )
   );
