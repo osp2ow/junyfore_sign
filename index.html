@@ -806,35 +806,63 @@ function cycleColumn(layout, key) {
 }
 
 // ----- 상단 사진+문구 (보기/편집 동일한 위치·배치) -----
-function renderTeacherHero(t, editing, onChange, onPhotoUpload, isPhotoUploading) {
+function TeacherHero(props) {
+  var t = props.t, editing = props.editing, onChange = props.onChange, onPhotoUpload = props.onPhotoUpload, isPhotoUploading = props.isPhotoUploading;
+  var gradState = useState(null); var grad = gradState[0], setGrad = gradState[1];
+
+  useEffect(function () {
+    setGrad(null);
+    if (!t.photoUrl) return;
+    var img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = function () {
+      try {
+        var canvas = document.createElement("canvas");
+        canvas.width = 24; canvas.height = 24;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, 24, 24);
+        var data = ctx.getImageData(0, 0, 24, 24).data;
+        var r = 0, g = 0, b = 0, count = 0;
+        for (var i = 0; i < data.length; i += 4) { r += data[i]; g += data[i + 1]; b += data[i + 2]; count++; }
+        r = Math.round(r / count); g = Math.round(g / count); b = Math.round(b / count);
+        var dark = "rgb(" + Math.round(r * 0.28) + "," + Math.round(g * 0.28) + "," + Math.round(b * 0.28) + ")";
+        var mid = "rgb(" + Math.round(r * 0.55) + "," + Math.round(g * 0.55) + "," + Math.round(b * 0.55) + ")";
+        setGrad("linear-gradient(135deg, " + mid + ", " + dark + ")");
+      } catch (e) {
+        setGrad(null); // 사진 서버의 CORS 설정 등으로 색상 추출이 안 되면 기본 그라데이션으로 대체
+      }
+    };
+    img.onerror = function () { setGrad(null); };
+    img.src = t.photoUrl;
+  }, [t.photoUrl]);
+
   var nameSpaced = (t.name || "").split("").join(" ");
-  var dashedInput = { background: "transparent", border: "none", borderBottom: "1px dashed rgba(255,255,255,0.4)", color: "#fff", textAlign: "right", width: "100%", padding: "2px 0", fontFamily: "inherit" };
-  return h("div", { style: {
-    position: "relative", borderRadius: "18px", overflow: "hidden", minHeight: "260px",
-    backgroundImage: t.photoUrl
-      ? "linear-gradient(90deg, rgba(10,10,10,0.15), rgba(10,10,10,0.9)), url('" + t.photoUrl + "')"
-      : "linear-gradient(135deg, #2b2b2b, #101010)",
-    backgroundSize: "cover", backgroundPosition: "center",
-    display: "flex", alignItems: "center", justifyContent: "flex-end",
-    padding: "36px 28px"
-  } },
-    editing ? h("label", { style: { position: "absolute", top: "14px", left: "14px", fontSize: "11px", fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.45)", padding: "6px 12px", borderRadius: "999px", cursor: "pointer" } },
-      isPhotoUploading ? "업로드 중…" : "사진 변경",
-      h("input", { type: "file", accept: "image/*", style: { display: "none" }, disabled: isPhotoUploading, onChange: function (e) { var f = e.target.files && e.target.files[0]; if (f) onPhotoUpload(f); } })
-    ) : null,
-    h("div", { style: { textAlign: "right", color: "#fff", maxWidth: "78%", width: editing ? "78%" : undefined } },
-      editing
-        ? h("input", { type: "text", placeholder: "직책 (예: 드럼 강사)", value: t.role, onChange: function (e) { onChange({ role: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: "13px", letterSpacing: "0.15em", marginBottom: "8px" }) })
-        : (t.role ? h("div", { style: { fontSize: "13px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.75)", marginBottom: "8px" } }, t.role) : null),
-      editing
-        ? h("input", { type: "text", placeholder: "이름", value: t.name, onChange: function (e) { onChange({ name: e.target.value }); }, style: Object.assign({}, dashedInput, { fontSize: "28px", fontWeight: 800, letterSpacing: "0.06em" }) })
-        : h("div", { style: { fontSize: "30px", fontWeight: 800, letterSpacing: "0.06em" } }, nameSpaced || "이름 미입력"),
-      editing
-        ? h("input", { type: "text", placeholder: "영문 타이틀 (예: DRUM TEACHER)", value: t.englishTitle, onChange: function (e) { onChange({ englishTitle: e.target.value }); }, style: Object.assign({}, dashedInput, { color: TC.accentBright, fontSize: "12px", letterSpacing: "0.3em", fontWeight: 700, marginTop: "8px" }) })
-        : (t.englishTitle ? h("div", { style: { fontSize: "12px", letterSpacing: "0.3em", color: TC.accentBright, marginTop: "8px", fontWeight: 700 } }, t.englishTitle) : null),
-      editing
-        ? h("textarea", { rows: 2, placeholder: "소개 문구 (2줄 정도)", value: t.quote, onChange: function (e) { onChange({ quote: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: "13px", lineHeight: "1.8", marginTop: "18px", resize: "vertical" }) })
-        : (t.quote ? h("div", { style: { marginTop: "18px", fontSize: "13px", color: "rgba(255,255,255,0.85)", lineHeight: "1.8", whiteSpace: "pre-line" } }, t.quote) : null)
+  var dashedInput = { background: "transparent", border: "none", borderBottom: "1px dashed rgba(255,255,255,0.4)", color: "#fff", textAlign: "left", width: "100%", padding: "2px 0", fontFamily: "inherit" };
+  var rightBg = grad || "linear-gradient(135deg, #2b2b2b, #101010)";
+
+  return h("div", { style: { display: "flex", borderRadius: "18px", overflow: "hidden", minHeight: "260px" } },
+    h("div", { style: { flex: "0 0 38%", position: "relative", background: "#1a1a1a" } },
+      t.photoUrl ? h("img", { src: t.photoUrl, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" } }) : null,
+      editing ? h("label", { style: { position: "absolute", bottom: "10px", left: "10px", fontSize: "11px", fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.5)", padding: "6px 12px", borderRadius: "999px", cursor: "pointer" } },
+        isPhotoUploading ? "업로드 중…" : "사진 변경",
+        h("input", { type: "file", accept: "image/*", style: { display: "none" }, disabled: isPhotoUploading, onChange: function (e) { var f = e.target.files && e.target.files[0]; if (f) onPhotoUpload(f); } })
+      ) : null
+    ),
+    h("div", { style: { flex: 1, background: rightBg, display: "flex", alignItems: "center", padding: "32px 28px" } },
+      h("div", { style: { textAlign: "left", color: "#fff", width: "100%" } },
+        editing
+          ? h("input", { type: "text", placeholder: "직책 (예: 드럼 강사)", value: t.role, onChange: function (e) { onChange({ role: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: "13px", letterSpacing: "0.15em", marginBottom: "8px" }) })
+          : (t.role ? h("div", { style: { fontSize: "13px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.75)", marginBottom: "8px" } }, t.role) : null),
+        editing
+          ? h("input", { type: "text", placeholder: "이름", value: t.name, onChange: function (e) { onChange({ name: e.target.value }); }, style: Object.assign({}, dashedInput, { fontSize: "26px", fontWeight: 800, letterSpacing: "0.06em" }) })
+          : h("div", { style: { fontSize: "28px", fontWeight: 800, letterSpacing: "0.06em" } }, nameSpaced || "이름 미입력"),
+        editing
+          ? h("input", { type: "text", placeholder: "영문 타이틀 (예: DRUM TEACHER)", value: t.englishTitle, onChange: function (e) { onChange({ englishTitle: e.target.value }); }, style: Object.assign({}, dashedInput, { color: TC.accentBright, fontSize: "12px", letterSpacing: "0.3em", fontWeight: 700, marginTop: "8px" }) })
+          : (t.englishTitle ? h("div", { style: { fontSize: "12px", letterSpacing: "0.3em", color: TC.accentBright, marginTop: "8px", fontWeight: 700 } }, t.englishTitle) : null),
+        editing
+          ? h("textarea", { rows: 2, placeholder: "소개 문구 (2줄 정도)", value: t.quote, onChange: function (e) { onChange({ quote: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: "13px", lineHeight: "1.8", marginTop: "18px", resize: "vertical" }) })
+          : (t.quote ? h("div", { style: { marginTop: "18px", fontSize: "13px", color: "rgba(255,255,255,0.85)", lineHeight: "1.8", whiteSpace: "pre-line" } }, t.quote) : null)
+      )
     )
   );
 }
@@ -1959,7 +1987,7 @@ function App() {
                   var rightKeys = layout.filter(function (s) { return s.column === "right"; }).map(function (s) { return s.key; });
                   return h(Frag, null,
                     h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "14px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setExpandedTeacherId(null); setTeacherEditingId(null); } }, "← 목록으로 접기"),
-                    renderTeacherHero(t, isEditing, patch, function (file) { uploadTeacherPhoto(t, file); }, teacherPhotoUploadingId === t.id),
+                    h(TeacherHero, { t: t, editing: isEditing, onChange: patch, onPhotoUpload: function (file) { uploadTeacherPhoto(t, file); }, isPhotoUploading: teacherPhotoUploadingId === t.id }),
                     isEditing ? h("div", { style: { marginTop: "16px" } },
                       h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, marginBottom: "6px" } }, "담당 악기"),
                       h("div", { className: "pill-group" },
