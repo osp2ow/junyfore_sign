@@ -758,6 +758,47 @@ function toPairArray(items) {
   });
 }
 
+// ----- 텍스트 붙여넣기로 선생님 프로필 자동 채우기 -----
+// 정해진 형식(아래 TEACHER_IMPORT_TEMPLATE 참고)의 텍스트를 파싱해서 선생님 데이터로 변환합니다.
+function parseTeacherImportText(text) {
+  var lines = (text || "").split(/\r?\n/);
+  var result = { name: "", role: "", englishTitle: "", quote: "", instruments: [], education: [], career: [], examResults: [], lessonHistory: [], features: [], lessonDays: "" };
+  var mode = null;
+  var quoteLines = [];
+  function stripBullet(s) { return s.replace(/^[-•]\s*/, "").trim(); }
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var m;
+    if ((m = line.match(/^이름\s*[:：]\s*(.*)$/))) { result.name = m[1].trim(); mode = null; continue; }
+    if ((m = line.match(/^직책\s*[:：]\s*(.*)$/))) { result.role = m[1].trim(); mode = null; continue; }
+    if ((m = line.match(/^영문\s*타이틀\s*[:：]\s*(.*)$/))) { result.englishTitle = m[1].trim(); mode = null; continue; }
+    if ((m = line.match(/^담당\s*악기\s*[:：]\s*(.*)$/))) { result.instruments = m[1].split(/[,、]/).map(function (s) { return s.trim(); }).filter(Boolean); mode = null; continue; }
+    if ((m = line.match(/^레슨\s*가능\s*요일\s*[:：]\s*(.*)$/))) { result.lessonDays = m[1].trim(); mode = null; continue; }
+    if ((m = line.match(/^소개\s*문구\s*[:：]?\s*(.*)$/))) { mode = "quote"; quoteLines = m[1] ? [m[1].trim()] : []; continue; }
+    if (/^학력사항\s*[:：]?\s*$/.test(line)) { mode = "education"; continue; }
+    if (/^경력\s*[:：]?\s*$/.test(line)) { mode = "career"; continue; }
+    if (/^제자\s*입시.*[:：]?\s*$/.test(line)) { mode = "examResults"; continue; }
+    if (/^이력\s*[:：]?\s*$/.test(line)) { mode = "lessonHistory"; continue; }
+    if (/^레슨\s*특징\s*[:：]?\s*$/.test(line)) { mode = "features"; continue; }
+    if (mode === "quote") { quoteLines.push(line); continue; }
+    if (mode === "education") { result.education.push(stripBullet(line)); continue; }
+    if (mode === "career") { result.career.push(stripBullet(line)); continue; }
+    if (mode === "examResults") { result.examResults.push({ a: stripBullet(line) }); continue; }
+    if (mode === "lessonHistory") { result.lessonHistory.push(stripBullet(line)); continue; }
+    if (mode === "features") {
+      var content = stripBullet(line);
+      var parts = content.split("|");
+      result.features.push({ a: (parts[0] || "").trim(), b: (parts[1] || "").trim() });
+      continue;
+    }
+  }
+  result.quote = quoteLines.join("\n");
+  return result;
+}
+
+var TEACHER_IMPORT_TEMPLATE = "이름: \n직책: \n영문타이틀: \n소개문구: \n담당악기: \n학력사항:\n- \n경력:\n- \n제자입시:\n- \n이력:\n- \n레슨특징:\n- 제목 | 부제\n레슨가능요일: ";
+
 // ----- 선생님 프로필 섹션 배치(왼쪽/오른쪽, 순서) -----
 var DEFAULT_SECTION_LAYOUT = [
   { key: "education", column: "left" },
@@ -899,8 +940,8 @@ function TeacherHero(props) {
   var dashedInput = { background: "transparent", border: "none", borderBottom: "1px dashed rgba(255,255,255,0.4)", color: "#fff", textAlign: "left", padding: "2px 0", fontFamily: "inherit" };
   var rightBg = grad || "linear-gradient(135deg, #2b2b2b, #101010)";
 
-  return h("div", { style: { display: "flex", borderRadius: "18px", overflow: "hidden", height: "260px" } },
-    h("div", { style: { flex: "0 0 38%", position: "relative", background: "#1a1a1a" } },
+  return h("div", { style: { display: "flex", borderRadius: "18px", overflow: "hidden", height: "340px" } },
+    h("div", { style: { flex: "0 0 30%", position: "relative", background: "#1a1a1a" } },
       t.photoUrl ? h("img", { src: t.photoUrl, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" } }) : null,
       editing ? h("label", { style: { position: "absolute", bottom: "10px", left: "10px", fontSize: "11px", fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.5)", padding: "6px 12px", borderRadius: "999px", cursor: "pointer" } },
         isPhotoUploading ? "업로드 중…" : "사진 변경",
@@ -1309,6 +1350,8 @@ function App() {
   var teachersErrorState = useState(""); var teachersError = teachersErrorState[0], setTeachersError = teachersErrorState[1];
   var expandedTeacherIdState = useState(null); var expandedTeacherId = expandedTeacherIdState[0], setExpandedTeacherId = expandedTeacherIdState[1];
   var teacherInstrumentFilterState = useState(null); var teacherInstrumentFilter = teacherInstrumentFilterState[0], setTeacherInstrumentFilter = teacherInstrumentFilterState[1];
+  var teacherImportOpenState = useState(false); var teacherImportOpen = teacherImportOpenState[0], setTeacherImportOpen = teacherImportOpenState[1];
+  var teacherImportTextState = useState(""); var teacherImportText = teacherImportTextState[0], setTeacherImportText = teacherImportTextState[1];
   var teacherEditingIdState = useState(null); var teacherEditingId = teacherEditingIdState[0], setTeacherEditingId = teacherEditingIdState[1];
   var teacherSavingIdState = useState(null); var teacherSavingId = teacherSavingIdState[0], setTeacherSavingId = teacherSavingIdState[1];
   var teacherPhotoUploadingIdState = useState(null); var teacherPhotoUploadingId = teacherPhotoUploadingIdState[0], setTeacherPhotoUploadingId = teacherPhotoUploadingIdState[1];
@@ -2006,9 +2049,24 @@ function App() {
             h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setTeacherInstrumentFilter(null); setTeacherEditingId(null); } }, "← 악기 목록으로"),
             h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, teacherInstrumentFilter, " 선생님")
           ),
-          h("div", { style: { marginBottom: "18px" } },
-            h("button", { type: "button", style: { width: "100%", padding: "15px 18px", borderRadius: "12px", fontSize: "15.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){ addTeacher({ instruments: [teacherInstrumentFilter] }); } }, "+ 새 선생님 추가")
+          h("div", { style: { display: "flex", gap: "8px", marginBottom: "18px" } },
+            h("button", { type: "button", style: { flex: 1, padding: "15px 18px", borderRadius: "12px", fontSize: "15.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){ addTeacher({ instruments: [teacherInstrumentFilter] }); } }, "+ 새 선생님 추가"),
+            h("button", { type: "button", style: { flex: "0 0 auto", padding: "15px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, cursor: "pointer", background: TC.surface, color: TC.textMuted }, onClick: function(){ setTeacherImportOpen(!teacherImportOpen); if (!teacherImportOpen && !teacherImportText) setTeacherImportText(TEACHER_IMPORT_TEMPLATE); } }, "텍스트로 빠르게 추가")
           ),
+          teacherImportOpen ? h("div", { style: { marginBottom: "18px", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "14px", padding: "16px" } },
+            h("div", { style: { fontSize: "12px", color: TC.textMuted, marginBottom: "10px", lineHeight: "1.6" } }, "PDF나 사진의 프로필 내용을 저(Claude)에게 정리해달라고 하시면, 아래 형식에 맞춰 붙여넣기용 텍스트를 드려요. 그걸 그대로 붙여넣고 \"가져오기\"를 누르면 자동으로 채워져요."),
+            h("textarea", { rows: 10, value: teacherImportText, onChange: function(e){ setTeacherImportText(e.target.value); }, style: { width: "100%", padding: "10px 12px", fontSize: "12.5px", fontFamily: "monospace", borderRadius: "9px", border: "1.5px solid var(--rule)", lineHeight: "1.6" } }),
+            h("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
+              h("button", { type: "button", style: { flex: 1, padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){
+                var parsed = parseTeacherImportText(teacherImportText);
+                if (!parsed.instruments || !parsed.instruments.length) parsed.instruments = [teacherInstrumentFilter];
+                addTeacher(parsed);
+                setTeacherImportOpen(false);
+                setTeacherImportText("");
+              } }, "가져오기"),
+              h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: function(){ setTeacherImportOpen(false); } }, "취소")
+            )
+          ) : null,
           teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).length === 0
             ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
             : null,
