@@ -899,7 +899,7 @@ function TeacherHero(props) {
   var dashedInput = { background: "transparent", border: "none", borderBottom: "1px dashed rgba(255,255,255,0.4)", color: "#fff", textAlign: "left", padding: "2px 0", fontFamily: "inherit" };
   var rightBg = grad || "linear-gradient(135deg, #2b2b2b, #101010)";
 
-  return h("div", { style: { display: "flex", borderRadius: "18px", overflow: "hidden", minHeight: "260px" } },
+  return h("div", { style: { display: "flex", borderRadius: "18px", overflow: "hidden", height: "260px" } },
     h("div", { style: { flex: "0 0 38%", position: "relative", background: "#1a1a1a" } },
       t.photoUrl ? h("img", { src: t.photoUrl, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" } }) : null,
       editing ? h("label", { style: { position: "absolute", bottom: "10px", left: "10px", fontSize: "11px", fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.5)", padding: "6px 12px", borderRadius: "999px", cursor: "pointer" } },
@@ -940,16 +940,15 @@ function tinyMoveButtons(arr, idx, onChange) {
 function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, moveUp, moveDown, cycleCol) {
   var items = toLineArray(itemsRaw);
   if (!editing && !items.filter(Boolean).length) return null;
-  var useColumns = !editing && items.filter(Boolean).length > 6;
-  return h("div", { key: key, style: { marginBottom: "28px" } },
+  return h("div", { key: key, style: { marginBottom: "22px" } },
     sectionHeaderRow(title, editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px", columnCount: useColumns ? 2 : undefined, columnGap: useColumns ? "28px" : undefined } },
+    h("div", { style: { paddingLeft: "12px" } },
       items.map(function (line, idx) {
-        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "9px", breakInside: useColumns ? "avoid" : undefined } },
+        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
           editing
             ? h("input", { type: "text", value: line, style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = e.target.value; onChange(next); } })
-            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.85" } }, line),
+            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, line),
           editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
@@ -959,33 +958,26 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
   );
 }
 
-// ----- 제자 입시 합격 결과 (학교명, 보기: 알약 태그 / 편집: 목록) -----
+// ----- 제자 입시 합격 결과 (학교명, 보기·편집 동일 배치) -----
 function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, cycleCol) {
   var items = toPairArray(itemsRaw);
   var valid = items.filter(function (it) { return it && it.a; });
   if (!editing && !valid.length) return null;
-  if (!editing) {
-    return h("div", { style: { marginBottom: "28px" } },
-      sectionHeaderRow("제자 입시 합격 결과", editing, moveUp, moveDown, cycleCol),
-      h("div", { style: { paddingLeft: "12px", display: "flex", flexWrap: "wrap", gap: "8px" } },
-        valid.map(function (it, idx) {
-          return h("span", { key: idx, style: { fontSize: "12.5px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "6px 14px", borderRadius: "999px", whiteSpace: "nowrap" } }, it.a);
-        })
-      )
-    );
-  }
-  return h("div", { style: { marginBottom: "28px" } },
+  var list = editing ? items : valid;
+  return h("div", { style: { marginBottom: "22px" } },
     sectionHeaderRow("제자 입시 합격 결과", editing, moveUp, moveDown, cycleCol),
     h("div", { style: { paddingLeft: "12px" } },
-      items.map(function (it, idx) {
-        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "9px" } },
+      list.map(function (it, idx) {
+        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
-          h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } }),
-          tinyMoveButtons(items, idx, onChange),
-          h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×")
+          editing
+            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
+            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, it.a),
+          editing ? tinyMoveButtons(items, idx, onChange) : null,
+          editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
       }),
-      h("button", { type: "button", onClick: function () { onChange(items.concat([{ a: "" }])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가")
+      editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([{ a: "" }])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
     )
   );
 }
