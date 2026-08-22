@@ -532,33 +532,9 @@ var REFUND_POLICY_NOTE = "학원의 설립·운영 및 과외교습에 관한 �
 
 /* ---------------- Pricing ---------------- */
 var PRICING_GROUPS = [
-  {
-    title: "취미반",
-    instruments: "기타, 드럼, 피아노, 보컬, 베이스",
-    priceType: "취미",
-    notes: [
-      "레슨은 주 1회, 1대1 레슨으로 1시간동안 진행됩니다.",
-      "결제는 1개월 기준이 아닌 4회차 기준입니다.",
-    ],
-  },
-  {
-    title: "입시반 · 전문반",
-    instruments: "기타, 드럼, 피아노, 보컬, 베이스, 작곡",
-    priceType: "입시",
-    notes: [
-      "취미 작곡 레슨은 전문반으로 진행됩니다.",
-      "레슨은 주 1회, 1대1 레슨으로 1시간동안 진행됩니다.",
-      "결제는 1개월 기준이 아닌 4회차 기준입니다.",
-    ],
-  },
-  {
-    title: "그룹반",
-    instruments: "기타, 드럼, 피아노, 보컬, 베이스, 작곡",
-    priceType: "그룹",
-    notes: [
-      "그룹 수업은 최대 2인입니다.",
-    ],
-  },
+  { title: "취미반", priceType: "취미" },
+  { title: "입시반 · 전문반", priceType: "입시" },
+  { title: "그룹반", priceType: "그룹" },
 ];
 
 var DISCOUNT_OPTIONS = [
@@ -1869,11 +1845,10 @@ function App() {
           PRICING_GROUPS.map(function (group) {
             var opts = priceOptionsFor(group.priceType);
             return h("div", { key: group.title, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
-              h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" } },
+              h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" } },
                 h("div", { style: { width: "4px", height: "18px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
                 h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, group.title)
               ),
-              h("div", { style: { fontSize: "12px", color: TC.textFaint, marginLeft: "14px", marginBottom: "16px" } }, group.instruments),
               opts.map(function (opt, idx) {
                 var builtIn = opt.key === "3개월(12회)" ? threeMonthBuiltInDiscount_for(group.priceType) : 0;
                 return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0", borderBottom: idx < opts.length - 1 ? "1px solid " + TC.border : "none" } },
@@ -1883,12 +1858,7 @@ function App() {
                     h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
                   )
                 );
-              }),
-              h("div", { style: { marginTop: "14px", paddingTop: "14px", borderTop: "1px solid " + TC.border } },
-                group.notes.map(function (note, idx) {
-                  return h("div", { key: idx, style: { fontSize: "12px", color: TC.textFaint, lineHeight: "1.7" } }, "- " + note);
-                })
-              )
+              })
             );
           })
         ),
