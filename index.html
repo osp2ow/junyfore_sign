@@ -583,6 +583,14 @@ function formatKRW(n) {
   return Number(n).toLocaleString("ko-KR") + "원";
 }
 
+// 네트워크가 느리거나 응답이 없을 때 "불러오는 중"에서 영영 멈추지 않도록, 일정 시간 지나면 에러로 처리합니다.
+function withTimeout(promise, ms, message) {
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(function () { reject(new Error(message || "요청 시간이 초과됐습니다.")); }, ms);
+    promise.then(function (v) { clearTimeout(timer); resolve(v); }, function (e) { clearTimeout(timer); reject(e); });
+  });
+}
+
 function todayStr() {
   var d = new Date();
   var pad = function(n){ return String(n).padStart(2, "0"); };
@@ -1353,6 +1361,14 @@ function App() {
   var teacherImportOpenState = useState(false); var teacherImportOpen = teacherImportOpenState[0], setTeacherImportOpen = teacherImportOpenState[1];
   var teacherImportTextState = useState(""); var teacherImportText = teacherImportTextState[0], setTeacherImportText = teacherImportTextState[1];
   var pricingSubTabState = useState("price"); var pricingSubTab = pricingSubTabState[0], setPricingSubTab = pricingSubTabState[1];
+  var eventImageState = useState(null); var eventImage = eventImageState[0], setEventImage = eventImageState[1];
+  var eventImageLoadedState = useState(false); var eventImageLoaded = eventImageLoadedState[0], setEventImageLoaded = eventImageLoadedState[1];
+  var eventImageErrorState = useState(""); var eventImageError = eventImageErrorState[0], setEventImageError = eventImageErrorState[1];
+  var eventImageUploadingState = useState(false); var eventImageUploading = eventImageUploadingState[0], setEventImageUploading = eventImageUploadingState[1];
+  var pricingImageState = useState(null); var pricingImage = pricingImageState[0], setPricingImage = pricingImageState[1];
+  var pricingImageLoadedState = useState(false); var pricingImageLoaded = pricingImageLoadedState[0], setPricingImageLoaded = pricingImageLoadedState[1];
+  var pricingImageErrorState = useState(""); var pricingImageError = pricingImageErrorState[0], setPricingImageError = pricingImageErrorState[1];
+  var pricingImageUploadingState = useState(false); var pricingImageUploading = pricingImageUploadingState[0], setPricingImageUploading = pricingImageUploadingState[1];
   var teacherEditingIdState = useState(null); var teacherEditingId = teacherEditingIdState[0], setTeacherEditingId = teacherEditingIdState[1];
   var teacherSavingIdState = useState(null); var teacherSavingId = teacherSavingIdState[0], setTeacherSavingId = teacherSavingIdState[1];
   var teacherPhotoUploadingIdState = useState(null); var teacherPhotoUploadingId = teacherPhotoUploadingIdState[0], setTeacherPhotoUploadingId = teacherPhotoUploadingIdState[1];
@@ -1431,34 +1447,44 @@ function App() {
     return unsub;
   }, []);
 
-  useEffect(function () {
-    if (mode !== "adminList" || !authUser || !db) return;
+  function fetchEnrollments() {
+    if (!db) return;
     setListLoading(true);
     setListError("");
-    db.collection(COLLECTION_NAME).orderBy("createdAt", "desc").get().then(function (snap) {
+    withTimeout(db.collection(COLLECTION_NAME).orderBy("createdAt", "desc").get(), 12000, "목록을 불러오는데 시간이 너무 오래 걸려요. 네트워크를 확인하고 다시 시도해 주세요.").then(function (snap) {
       var list = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
       setEnrollments(list);
     }).catch(function (e) {
       console.error(e);
-      setListError("목록을 불러오지 못했습니다: " + e.message);
+      setListError((e && e.message) ? e.message : "목록을 불러오지 못했습니다.");
     }).finally(function () {
       setListLoading(false);
     });
-  }, [mode, authUser]);
+  }
 
   useEffect(function () {
-    if (adminTab !== "teachers" || !authUser || !db) return;
+    if (mode !== "adminList" || !authUser || !db) return;
+    fetchEnrollments();
+  }, [mode, authUser]);
+
+  function fetchTeachers() {
+    if (!db) return;
     setTeachersLoading(true);
     setTeachersError("");
-    db.collection("teachers").get().then(function (snap) {
+    withTimeout(db.collection("teachers").get(), 12000, "선생님 목록을 불러오는데 시간이 너무 오래 걸려요. 네트워크를 확인하고 다시 시도해 주세요.").then(function (snap) {
       var list = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
       setTeachers(list);
     }).catch(function (e) {
       console.error(e);
-      setTeachersError("선생님 목록을 불러오지 못했습니다: " + e.message);
+      setTeachersError((e && e.message) ? e.message : "선생님 목록을 불러오지 못했습니다.");
     }).finally(function () {
       setTeachersLoading(false);
     });
+  }
+
+  useEffect(function () {
+    if (adminTab !== "teachers" || !authUser || !db) return;
+    fetchTeachers();
   }, [adminTab, authUser]);
 
   function emptyTeacher() {
@@ -1531,12 +1557,12 @@ function App() {
     if (!db) return;
     setCurriculumLoading(true);
     setCurriculumError("");
-    db.collection("curriculum").doc(instrument).get().then(function (doc) {
+    withTimeout(db.collection("curriculum").doc(instrument).get(), 12000, "커리큘럼을 불러오는데 시간이 너무 오래 걸려요. 네트워크를 확인하고 다시 시도해 주세요.").then(function (doc) {
       var data = doc.exists ? doc.data() : { stages: [] };
       setCurriculumData(function (prev) { var next = Object.assign({}, prev); next[instrument] = data; return next; });
     }).catch(function (e) {
       console.error(e);
-      setCurriculumError("커리큘럼을 불러오지 못했습니다: " + e.message);
+      setCurriculumError((e && e.message) ? e.message : "커리큘럼을 불러오지 못했습니다.");
     }).finally(function () {
       setCurriculumLoading(false);
     });
@@ -1558,6 +1584,86 @@ function App() {
       setCurriculumError("저장 중 오류가 발생했습니다: " + e.message);
     }).finally(function () {
       setCurriculumSaving(false);
+    });
+  }
+
+  function fetchEventImage() {
+    if (!db) return;
+    withTimeout(db.collection("settings").doc("eventImage").get(), 12000, "이벤트 안내 이미지를 불러오는데 시간이 너무 오래 걸려요.").then(function (doc) {
+      setEventImage(doc.exists ? doc.data() : null);
+    }).catch(function (e) {
+      console.error(e);
+      setEventImageError((e && e.message) ? e.message : "이벤트 안내 이미지를 불러오지 못했습니다.");
+    }).finally(function () {
+      setEventImageLoaded(true);
+    });
+  }
+
+  useEffect(function () {
+    if (adminTab !== "pricing" || pricingSubTab !== "event" || !authUser || !db) return;
+    if (eventImageLoaded) return;
+    fetchEventImage();
+  }, [adminTab, pricingSubTab, authUser]);
+
+  function uploadEventImage(file) {
+    if (!storage || !file) return;
+    setEventImageUploading(true);
+    setEventImageError("");
+    var path = "settings/event-image-" + Date.now() + ".jpg";
+    storage.ref(path).put(file).then(function () {
+      return storage.ref(path).getDownloadURL();
+    }).then(function (url) {
+      var oldPath = eventImage && eventImage.path;
+      var data = { url: url, path: path };
+      return db.collection("settings").doc("eventImage").set(data).then(function () {
+        setEventImage(data);
+        if (oldPath && storage) storage.ref(oldPath).delete().catch(function () {});
+      });
+    }).catch(function (e) {
+      console.error(e);
+      setEventImageError((e && e.message) ? e.message : "이미지 업로드 중 오류가 발생했습니다.");
+    }).finally(function () {
+      setEventImageUploading(false);
+    });
+  }
+
+  function fetchPricingImage() {
+    if (!db) return;
+    withTimeout(db.collection("settings").doc("pricingImage").get(), 12000, "가격표 이미지를 불러오는데 시간이 너무 오래 걸려요.").then(function (doc) {
+      setPricingImage(doc.exists ? doc.data() : null);
+    }).catch(function (e) {
+      console.error(e);
+      setPricingImageError((e && e.message) ? e.message : "가격표 이미지를 불러오지 못했습니다.");
+    }).finally(function () {
+      setPricingImageLoaded(true);
+    });
+  }
+
+  useEffect(function () {
+    if (adminTab !== "pricing" || pricingSubTab !== "price" || !authUser || !db) return;
+    if (pricingImageLoaded) return;
+    fetchPricingImage();
+  }, [adminTab, pricingSubTab, authUser]);
+
+  function uploadPricingImage(file) {
+    if (!storage || !file) return;
+    setPricingImageUploading(true);
+    setPricingImageError("");
+    var path = "settings/pricing-image-" + Date.now() + ".jpg";
+    storage.ref(path).put(file).then(function () {
+      return storage.ref(path).getDownloadURL();
+    }).then(function (url) {
+      var oldPath = pricingImage && pricingImage.path;
+      var data = { url: url, path: path };
+      return db.collection("settings").doc("pricingImage").set(data).then(function () {
+        setPricingImage(data);
+        if (oldPath && storage) storage.ref(oldPath).delete().catch(function () {});
+      });
+    }).catch(function (e) {
+      console.error(e);
+      setPricingImageError((e && e.message) ? e.message : "이미지 업로드 중 오류가 발생했습니다.");
+    }).finally(function () {
+      setPricingImageUploading(false);
     });
   }
 
@@ -1948,7 +2054,7 @@ function App() {
           h(Pill, { selected: sortMode==="name", onClick: function(){ setSortMode("name"); } }, "이름순")
         ),
         listLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "불러오는 중…") : null,
-        listError ? h("div", { className: "error-banner" }, listError) : null,
+        listError ? h("div", { className: "error-banner" }, listError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchEnrollments }, "다시 시도")) : null,
         (!listLoading && sortedEnrollments.length === 0) ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "등록된 원서가 없습니다.") : null,
         !listLoading && sortedEnrollments.length > 0 ? h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", marginBottom: "8px" } }, "총 " + sortedEnrollments.length + "건") : null,
         sortedEnrollments.map(function (rec) {
@@ -2021,7 +2127,7 @@ function App() {
       ) : null,
       adminTab === "teachers" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
         h("div", { className: "section-title", style: { color: TC.text } }, "선생님 프로필 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
-        teachersError ? h("div", { className: "error-banner" }, teachersError) : null,
+        teachersError ? h("div", { className: "error-banner" }, teachersError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchTeachers }, "다시 시도")) : null,
         teachersLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : null,
         !teacherInstrumentFilter ? h(Frag, null,
           h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "18px" } }, "악기를 선택하면 담당 선생님을 볼 수 있어요."),
@@ -2149,59 +2255,42 @@ function App() {
 
       adminTab === "pricing" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
         h("div", { style: { marginBottom: "18px" } },
-          h("span", { style: { display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "4px 12px", borderRadius: "999px", marginBottom: "8px" } }, "주니퍼 실용음악학원"),
-          h("div", { style: { fontSize: "24px", fontWeight: 800, color: TC.text } }, "레슨비 안내")
-        ),
-        h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "14px", padding: "14px 18px", marginBottom: "20px" } },
-          h("div", { style: { fontSize: "12.5px", color: TC.textMuted, lineHeight: "1.8" } },
-            "· 레슨은 주 1회 / 1대1수업 / 1시간 수업", h("br"),
-            "· 결제는 1개월 기준이 아닌 4회차 기준입니다."
-          )
+          h("span", { style: { display: "inline-block", fontSize: "12px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "5px 13px", borderRadius: "999px", marginBottom: "10px" } }, "주니퍼 실용음악학원"),
+          h("div", { style: { fontSize: "27px", fontWeight: 800, color: TC.text } }, "레슨비 안내")
         ),
         h("div", { style: { display: "flex", gap: "4px", borderBottom: "1px solid " + TC.border, marginBottom: "20px" } },
-          [["price", "가격 안내"], ["discount", "할인 안내"]].map(function (tab) {
+          [["price", "가격 안내"], ["event", "이벤트 안내"]].map(function (tab) {
             var active = pricingSubTab === tab[0];
             return h("button", {
               key: tab[0], type: "button", onClick: function(){ setPricingSubTab(tab[0]); },
-              style: { padding: "10px 14px", background: "none", border: "none", borderBottom: active ? "2px solid " + TC.accentBright : "2px solid transparent", color: active ? TC.text : TC.textMuted, fontWeight: active ? 700 : 600, fontSize: "13.5px", cursor: "pointer" }
+              style: { padding: "11px 16px", background: "none", border: "none", borderBottom: active ? "2px solid " + TC.accentBright : "2px solid transparent", color: active ? TC.text : TC.textMuted, fontWeight: active ? 700 : 600, fontSize: "15px", cursor: "pointer" }
             }, tab[1]);
           })
         ),
-        pricingSubTab === "price" ? h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "16px" } },
-          PRICING_GROUPS.map(function (group) {
-            var opts = priceOptionsFor(group.priceType);
-            return h("div", { key: group.title, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
-              h("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" } },
-                h("div", { style: { width: "4px", height: "18px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
-                h("div", { style: { fontSize: "16px", fontWeight: 800, color: TC.text } }, group.title)
-              ),
-              opts.map(function (opt, idx) {
-                var builtIn = opt.key === "3개월(12회)" ? threeMonthBuiltInDiscount_for(group.priceType) : 0;
-                return h("div", { key: idx, style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "10px 0", borderBottom: idx < opts.length - 1 ? "1px solid " + TC.border : "none" } },
-                  h("span", { style: { fontSize: "14px", color: TC.textMuted } }, opt.key + (opt.note ? " · " + opt.note : "")),
-                  h("span", { style: { display: "flex", alignItems: "baseline", gap: "8px" } },
-                    builtIn > 0 ? h("span", { style: { fontSize: "13px", fontWeight: 700, color: "#4A5A73" } }, "(-" + formatKRW(builtIn) + ")") : null,
-                    h("span", { style: { fontSize: "17px", fontWeight: 800, color: TC.accentBright } }, formatKRW(opt.price))
-                  )
-                );
-              })
-            );
-          })
-        ) : h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
-          h("div", { style: { fontSize: "15px", fontWeight: 800, color: TC.text, marginBottom: "16px" } }, "할인 안내"),
-          DISCOUNT_OPTIONS.map(function (d, idx) {
-            return h("div", { key: idx, style: { display: "flex", gap: "8px", fontSize: "13.5px", color: TC.text, lineHeight: "1.85", marginBottom: "4px" } },
-              h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
-              h("span", null, d.desc)
-            );
-          }),
-          h("div", { style: { fontSize: "12px", color: TC.textFaint, marginTop: "14px", paddingTop: "14px", borderTop: "1px solid " + TC.border, lineHeight: "1.7" } }, "* 3개월(12회) 등록, 그룹 레슨은 이미 할인된 요금이라 추가 할인이 적용되지 않으며, 중복 할인은 불가합니다.")
+        pricingSubTab === "price" ? h(Frag, null,
+          pricingImageError ? h("div", { className: "error-banner", style: { marginBottom: "14px" } }, pricingImageError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchPricingImage }, "다시 시도")) : null,
+          pricingImage && pricingImage.url
+            ? h("img", { src: pricingImage.url, style: { width: "100%", borderRadius: "18px", display: "block", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } })
+            : h("div", { style: { padding: "50px 20px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "18px" } }, "아직 가격표 이미지가 없어요. 아래에서 업로드해 주세요."),
+          h("label", { style: { display: "inline-block", marginTop: "16px", padding: "11px 18px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" } },
+            pricingImageUploading ? "업로드 중…" : (pricingImage && pricingImage.url ? "이미지 교체" : "이미지 업로드"),
+            h("input", { type: "file", accept: "image/*", style: { display: "none" }, disabled: pricingImageUploading, onChange: function(e){ var f = e.target.files && e.target.files[0]; if (f) uploadPricingImage(f); } })
+          )
+        ) : h(Frag, null,
+          eventImageError ? h("div", { className: "error-banner", style: { marginBottom: "14px" } }, eventImageError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchEventImage }, "다시 시도")) : null,
+          eventImage && eventImage.url
+            ? h("img", { src: eventImage.url, style: { width: "100%", borderRadius: "18px", display: "block", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } })
+            : h("div", { style: { padding: "50px 20px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "18px" } }, "아직 이벤트 안내 이미지가 없어요. 아래에서 업로드해 주세요."),
+          h("label", { style: { display: "inline-block", marginTop: "16px", padding: "11px 18px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" } },
+            eventImageUploading ? "업로드 중…" : (eventImage && eventImage.url ? "이미지 교체" : "이미지 업로드"),
+            h("input", { type: "file", accept: "image/*", style: { display: "none" }, disabled: eventImageUploading, onChange: function(e){ var f = e.target.files && e.target.files[0]; if (f) uploadEventImage(f); } })
+          )
         )
       ) : null,
 
       adminTab === "curriculum" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
         h("div", { className: "section-title", style: { color: TC.text } }, "커리큘럼 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
-        curriculumError ? h("div", { className: "error-banner" }, curriculumError) : null,
+        curriculumError ? h("div", { className: "error-banner" }, curriculumError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: function(){ if (curriculumInstrument) fetchCurriculum(curriculumInstrument); } }, "다시 시도")) : null,
         !curriculumInstrument ? h(Frag, null,
           h("div", { style: { fontSize: "13px", color: TC.textMuted, marginBottom: "18px" } }, "악기를 선택하면 해당 커리큘럼을 볼 수 있어요."),
           h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" } },
