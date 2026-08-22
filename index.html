@@ -855,24 +855,22 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
 // ----- 제자 입시 합격 결과 (학교명 · 연도, 보기·편집 동일 배치, 로고 없음) -----
 function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, cycleCol) {
   var items = toPairArray(itemsRaw);
-  var valid = items.filter(function (it) { return it && (it.a || it.b); });
+  var valid = items.filter(function (it) { return it && it.a; });
   if (!editing && !valid.length) return null;
   var list = editing ? items : valid;
   return h("div", { style: { marginBottom: "22px" } },
     sectionHeaderRow("제자 입시 합격 결과", editing, moveUp, moveDown, cycleCol),
     h("div", { style: { paddingLeft: "12px" } },
       list.map(function (it, idx) {
-        return h("div", { key: idx, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "7px 0", borderBottom: idx < list.length - 1 ? "1px solid " + TC.border : "none", fontSize: "13.5px" } },
+        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" } },
+          h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
           editing
-            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 2, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
-            : h("span", { style: { color: TC.text } }, it.a),
-          editing
-            ? h("input", { type: "text", placeholder: "연도", value: it.b || "", style: { flex: "0 0 60px", border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.textMuted, fontWeight: 700, textAlign: "right", padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { b: e.target.value }); onChange(next); } })
-            : h("span", { style: { color: TC.textMuted, fontWeight: 700 } }, it.b),
+            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
+            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, it.a),
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
       }),
-      editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([{ a: "", b: "" }])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
+      editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([{ a: "" }])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
     )
   );
 }
