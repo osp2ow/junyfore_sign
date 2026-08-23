@@ -1063,24 +1063,46 @@ function BirthDateInput(props) {
   var value = props.value || "";
   var onChange = props.onChange;
   var bd = splitBirthDate(value);
+  var yearRef = useRef(null), monthRef = useRef(null), dayRef = useRef(null);
   var subStyle = { border: "none", background: "transparent", padding: "0", borderRadius: "0", boxShadow: "none", textAlign: "center", fontSize: "16px", flex: "0 0 auto" };
-  return h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", border: "1.5px solid var(--rule)", borderRadius: "12px", padding: "14px 8px", background: "#fff", width: "100%" } },
+
+  function handleWrapMouseDown(e) {
+    // 아직 아무것도 입력 안 된 상태라면, 어디를 눌렀든(월/일 칸 포함) 연도부터 입력하게 합니다.
+    if (!bd.y && !bd.m && !bd.d) {
+      e.preventDefault();
+      if (yearRef.current) yearRef.current.focus();
+    }
+  }
+
+  return h("div", { onMouseDown: handleWrapMouseDown, onTouchStart: handleWrapMouseDown, style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", border: "1.5px solid var(--rule)", borderRadius: "12px", padding: "14px 8px", background: "#fff", width: "100%" } },
     h("input", {
+      ref: yearRef,
       type: "text", inputMode: "numeric", placeholder: "2000", maxLength: 4,
       style: Object.assign({}, subStyle, { width: "46px" }),
       value: bd.y,
-      onChange: function (e) { onChange(joinBirthDate(e.target.value.replace(/\D/g, "").slice(0, 4), bd.m, bd.d)); }
+      onFocus: function (e) { if (!bd.y) e.target.setSelectionRange(0, 0); },
+      onChange: function (e) {
+        var digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+        onChange(joinBirthDate(digits, bd.m, bd.d));
+        if (digits.length === 4 && monthRef.current) monthRef.current.focus();
+      }
     }),
     h("span", { style: { color: "var(--ink-soft)" } }, "."),
     h("input", {
+      ref: monthRef,
       type: "text", inputMode: "numeric", placeholder: "01", maxLength: 2,
       style: Object.assign({}, subStyle, { width: "26px" }),
       value: bd.m,
-      onChange: function (e) { onChange(joinBirthDate(bd.y, e.target.value.replace(/\D/g, "").slice(0, 2), bd.d)); },
+      onChange: function (e) {
+        var digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+        onChange(joinBirthDate(bd.y, digits, bd.d));
+        if (digits.length === 2 && dayRef.current) dayRef.current.focus();
+      },
       onBlur: function (e) { onChange(joinBirthDate(bd.y, padTwo(e.target.value), bd.d)); }
     }),
     h("span", { style: { color: "var(--ink-soft)" } }, "."),
     h("input", {
+      ref: dayRef,
       type: "text", inputMode: "numeric", placeholder: "01", maxLength: 2,
       style: Object.assign({}, subStyle, { width: "26px" }),
       value: bd.d,
