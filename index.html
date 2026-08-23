@@ -764,7 +764,7 @@ function sectionResizeHandle(currentHeight, onResizeHeight) {
     document.addEventListener("touchmove", onMove, { passive: false });
     document.addEventListener("touchend", onUp);
   }
-  return h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginTop: "4px" } },
+  return h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "4px" } },
     h("button", { type: "button", onClick: function(){ onResizeHeight(Math.max(30, (currentHeight || BASE_HEIGHT) - STEP)); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "− 높이"),
     h("div", {
       onMouseDown: startResize, onTouchStart: startResize,
@@ -772,7 +772,8 @@ function sectionResizeHandle(currentHeight, onResizeHeight) {
     },
       h("div", { style: { width: "36px", height: "4px", borderRadius: "2px", background: TC.border } })
     ),
-    h("button", { type: "button", onClick: function(){ onResizeHeight((currentHeight || BASE_HEIGHT) + STEP); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "+ 높이")
+    h("button", { type: "button", onClick: function(){ onResizeHeight((currentHeight || BASE_HEIGHT) + STEP); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "+ 높이"),
+    currentHeight ? h("button", { type: "button", onClick: function(){ onResizeHeight(null); }, style: { border: "1px solid " + TC.border, background: "transparent", color: TC.textFaint, cursor: "pointer", fontSize: "11px", padding: "3px 8px", borderRadius: "6px" } }, "자동으로") : null
   );
 }
 
@@ -1061,7 +1062,7 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
   if (!editing && !items.filter(Boolean).length) return null;
   return h("div", { key: key, style: { marginBottom: "22px" } },
     sectionHeaderRow(title, editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px", minHeight: height ? height + "px" : undefined } },
+    h("div", { style: { paddingLeft: "12px", height: height ? height + "px" : "auto", overflowY: height ? "auto" : "visible" } },
       items.map(function (line, idx) {
         return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
@@ -1086,7 +1087,7 @@ function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, 
   var list = editing ? items : valid;
   return h("div", { style: { marginBottom: "22px" } },
     sectionHeaderRow("제자 입시 합격 결과", editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px", minHeight: height ? height + "px" : undefined } },
+    h("div", { style: { paddingLeft: "12px", height: height ? height + "px" : "auto", overflowY: height ? "auto" : "visible" } },
       list.map(function (it, idx) {
         return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
