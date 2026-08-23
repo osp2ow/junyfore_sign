@@ -733,7 +733,37 @@ function Pill(props) {
 function TeacherSectionLabel(props) {
   return h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" } },
     h("div", { style: { width: "4px", height: "16px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
-    h("div", { style: { fontSize: "14.5px", fontWeight: 800, color: TC.text } }, props.children)
+    h("div", { style: { fontSize: "16.5px", fontWeight: 800, color: TC.text } }, props.children)
+  );
+}
+
+// 편집 중 섹션 하단에 뜨는 드래그 핸들 — 위아래로 끌면 그 섹션의 세로 높이(minHeight)를 조절합니다. 가로 폭은 열 구조상 고정이에요.
+function sectionResizeHandle(currentHeight, onResizeHeight) {
+  function startResize(e) {
+    e.preventDefault();
+    var startY = e.touches ? e.touches[0].clientY : e.clientY;
+    var startH = currentHeight || 0;
+    function onMove(ev) {
+      var clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      var next = Math.max(30, startH + (clientY - startY));
+      onResizeHeight(next);
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend", onUp);
+  }
+  return h("div", {
+    onMouseDown: startResize, onTouchStart: startResize,
+    style: { height: "16px", marginTop: "2px", cursor: "ns-resize", display: "flex", alignItems: "center", justifyContent: "center" }
+  },
+    h("div", { style: { width: "40px", height: "4px", borderRadius: "2px", background: TC.border } })
   );
 }
 
@@ -857,10 +887,10 @@ function cycleColumn(layout, key) {
 
 // ----- 상단 사진+문구 (보기/편집 동일한 위치·배치) -----
 var DEFAULT_HERO_LAYOUT = {
-  role: { x: 6, y: 38, size: 13 },
-  name: { x: 6, y: 47, size: 28 },
-  englishTitle: { x: 6, y: 60, size: 12 },
-  quote: { x: 6, y: 72, size: 13 },
+  role: { x: 6, y: 36, size: 15 },
+  name: { x: 6, y: 46, size: 33 },
+  englishTitle: { x: 6, y: 60, size: 14 },
+  quote: { x: 6, y: 72, size: 15 },
 };
 
 function TeacherHero(props) {
@@ -895,27 +925,54 @@ function TeacherHero(props) {
   }, [t.photoUrl]);
 
   var heroLayout = Object.assign({}, DEFAULT_HERO_LAYOUT, t.heroLayout || {});
+  var groupModeState = useState(false); var groupMode = groupModeState[0], setGroupMode = groupModeState[1];
   function updateLayout(key, patch) {
     var next = Object.assign({}, heroLayout);
     next[key] = Object.assign({}, next[key], patch);
     onChange({ heroLayout: next });
   }
   function adjustSize(key, delta) {
+    if (groupMode) {
+      var next = Object.assign({}, heroLayout);
+      Object.keys(next).forEach(function (k) {
+        var cur = next[k].size;
+        next[k] = Object.assign({}, next[k], { size: Math.max(9, Math.min(64, cur + delta)) });
+      });
+      onChange({ heroLayout: next });
+      return;
+    }
     var cur = heroLayout[key].size;
-    var next = Math.max(9, Math.min(60, cur + delta));
-    updateLayout(key, { size: next });
+    updateLayout(key, { size: Math.max(9, Math.min(64, cur + delta)) });
   }
   function startDrag(key) {
     return function (e) {
       if (!editing) return;
       e.preventDefault();
       var rect = panelRef.current.getBoundingClientRect();
+      var startClientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var startClientY = e.touches ? e.touches[0].clientY : e.clientY;
+      var startPositions = {};
+      Object.keys(heroLayout).forEach(function (k) { startPositions[k] = { x: heroLayout[k].x, y: heroLayout[k].y }; });
       function onMove(ev) {
         var clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
         var clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
-        var xPct = Math.min(92, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
-        var yPct = Math.min(92, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
-        updateLayout(key, { x: xPct, y: yPct });
+        var dxPct = ((clientX - startClientX) / rect.width) * 100;
+        var dyPct = ((clientY - startClientY) / rect.height) * 100;
+        if (groupMode) {
+          var next = Object.assign({}, heroLayout);
+          Object.keys(startPositions).forEach(function (k) {
+            next[k] = Object.assign({}, next[k], {
+              x: Math.min(92, Math.max(0, startPositions[k].x + dxPct)),
+              y: Math.min(92, Math.max(0, startPositions[k].y + dyPct))
+            });
+          });
+          onChange({ heroLayout: next });
+        } else {
+          updateLayout(key, {
+            x: Math.min(92, Math.max(0, startPositions[key].x + dxPct)),
+            y: Math.min(92, Math.max(0, startPositions[key].y + dyPct))
+          });
+        }
       }
       function onUp() {
         document.removeEventListener("mousemove", onMove);
@@ -958,7 +1015,10 @@ function TeacherHero(props) {
       ) : null
     ),
     h("div", { ref: panelRef, style: { flex: 1, background: rightBg, position: "relative" } },
-      editing ? h("button", { type: "button", onClick: function () { onChange({ heroLayout: DEFAULT_HERO_LAYOUT }); }, style: { position: "absolute", top: "8px", right: "8px", zIndex: 3, border: "none", background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", cursor: "pointer", fontSize: "10px", padding: "4px 8px", borderRadius: "6px" } }, "위치 초기화") : null,
+      editing ? h("div", { style: { position: "absolute", top: "8px", right: "8px", zIndex: 3, display: "flex", gap: "6px" } },
+        h("button", { type: "button", onClick: function () { setGroupMode(!groupMode); }, style: { border: "none", background: groupMode ? TC.accentBright : "rgba(255,255,255,0.15)", color: groupMode ? "#fff" : "rgba(255,255,255,0.8)", cursor: "pointer", fontSize: "10px", fontWeight: 700, padding: "4px 8px", borderRadius: "6px" } }, groupMode ? "묶어서 이동 중" : "묶어서 이동"),
+        h("button", { type: "button", onClick: function () { onChange({ heroLayout: DEFAULT_HERO_LAYOUT }); }, style: { border: "none", background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", cursor: "pointer", fontSize: "10px", padding: "4px 8px", borderRadius: "6px" } }, "위치 초기화")
+      ) : null,
       draggableWrap("role", editing
         ? h("input", { type: "text", placeholder: "직책 (예: 드럼 강사)", value: t.role, onChange: function (e) { onChange({ role: e.target.value }); }, style: Object.assign({}, dashedInput, { color: "rgba(255,255,255,0.85)", fontSize: heroLayout.role.size + "px", letterSpacing: "0.15em", width: "220px" }) })
         : (t.role ? h("div", { style: { fontSize: heroLayout.role.size + "px", letterSpacing: "0.15em", color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" } }, t.role) : null)
@@ -987,48 +1047,50 @@ function tinyMoveButtons(arr, idx, onChange) {
   );
 }
 
-function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, moveUp, moveDown, cycleCol) {
+function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, moveUp, moveDown, cycleCol, height, onResizeHeight) {
   var items = toLineArray(itemsRaw);
   if (!editing && !items.filter(Boolean).length) return null;
   return h("div", { key: key, style: { marginBottom: "22px" } },
     sectionHeaderRow(title, editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px" } },
+    h("div", { style: { paddingLeft: "12px", minHeight: height ? height + "px" : undefined } },
       items.map(function (line, idx) {
-        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" } },
+        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
           editing
-            ? h("input", { type: "text", value: line, style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = e.target.value; onChange(next); } })
-            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, line),
+            ? h("input", { type: "text", value: line, style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "15px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = e.target.value; onChange(next); } })
+            : h("span", { style: { fontSize: "15px", color: TC.text, lineHeight: "1.75" } }, line),
           editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
       }),
       editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([""])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
-    )
+    ),
+    editing ? sectionResizeHandle(height, onResizeHeight) : null
   );
 }
 
 // ----- 제자 입시 합격 결과 (학교명, 보기·편집 동일 배치) -----
-function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, cycleCol) {
+function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, cycleCol, height, onResizeHeight) {
   var items = toPairArray(itemsRaw);
   var valid = items.filter(function (it) { return it && it.a; });
   if (!editing && !valid.length) return null;
   var list = editing ? items : valid;
   return h("div", { style: { marginBottom: "22px" } },
     sectionHeaderRow("제자 입시 합격 결과", editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px" } },
+    h("div", { style: { paddingLeft: "12px", minHeight: height ? height + "px" : undefined } },
       list.map(function (it, idx) {
-        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" } },
+        return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
           editing
-            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
-            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, it.a),
+            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "15px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
+            : h("span", { style: { fontSize: "15px", color: TC.text, lineHeight: "1.75" } }, it.a),
           editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
       }),
       editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([{ a: "" }])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
-    )
+    ),
+    editing ? sectionResizeHandle(height, onResizeHeight) : null
   );
 }
 
@@ -2026,7 +2088,7 @@ function App() {
       { key: "curriculum", label: "커리큘럼" },
     ];
     return h("div", { style: { minHeight: "100vh", background: TC.bg } },
-      h("div", { style: { maxWidth: "980px", margin: "0 auto", padding: "28px 20px 80px" } },
+      h("div", { style: { maxWidth: "100%", margin: "0 auto", padding: "28px 36px 80px" } },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" } },
         h("div", { style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 700, fontSize: "20px", color: TC.text } }, "등록 원서 목록"),
         h("button", { type: "button", style: { padding: "9px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" }, onClick: handleAdminLogout }, "로그아웃")
@@ -2226,11 +2288,17 @@ function App() {
                   function sectionMoveUp(key) { patch({ sectionLayout: moveInColumn(getSectionLayout(t), key, "up") }); }
                   function sectionMoveDown(key) { patch({ sectionLayout: moveInColumn(getSectionLayout(t), key, "down") }); }
                   function sectionCycleCol(key) { patch({ sectionLayout: cycleColumn(getSectionLayout(t), key) }); }
+                  function sectionHeight(key) { return t.sectionHeights && t.sectionHeights[key]; }
+                  function setSectionHeight(key, px) {
+                    var next = Object.assign({}, t.sectionHeights || {});
+                    next[key] = px;
+                    patch({ sectionHeights: next });
+                  }
                   function renderSectionByKey(key) {
-                    if (key === "education") return renderInlineBulletSection("학력사항", "education", t.education, isEditing, function (next) { patch({ education: next }); }, function () { sectionMoveUp("education"); }, function () { sectionMoveDown("education"); }, function () { sectionCycleCol("education"); });
-                    if (key === "career") return renderInlineBulletSection("경력", "career", t.career, isEditing, function (next) { patch({ career: next }); }, function () { sectionMoveUp("career"); }, function () { sectionMoveDown("career"); }, function () { sectionCycleCol("career"); });
-                    if (key === "lessonHistory") return renderInlineBulletSection("이력", "lessonHistory", t.lessonHistory, isEditing, function (next) { patch({ lessonHistory: next }); }, function () { sectionMoveUp("lessonHistory"); }, function () { sectionMoveDown("lessonHistory"); }, function () { sectionCycleCol("lessonHistory"); });
-                    if (key === "examResults") return renderInlineExamSection(t.examResults, isEditing, function (next) { patch({ examResults: next }); }, function () { sectionMoveUp("examResults"); }, function () { sectionMoveDown("examResults"); }, function () { sectionCycleCol("examResults"); });
+                    if (key === "education") return renderInlineBulletSection("학력사항", "education", t.education, isEditing, function (next) { patch({ education: next }); }, function () { sectionMoveUp("education"); }, function () { sectionMoveDown("education"); }, function () { sectionCycleCol("education"); }, sectionHeight("education"), function (px) { setSectionHeight("education", px); });
+                    if (key === "career") return renderInlineBulletSection("경력", "career", t.career, isEditing, function (next) { patch({ career: next }); }, function () { sectionMoveUp("career"); }, function () { sectionMoveDown("career"); }, function () { sectionCycleCol("career"); }, sectionHeight("career"), function (px) { setSectionHeight("career", px); });
+                    if (key === "lessonHistory") return renderInlineBulletSection("이력", "lessonHistory", t.lessonHistory, isEditing, function (next) { patch({ lessonHistory: next }); }, function () { sectionMoveUp("lessonHistory"); }, function () { sectionMoveDown("lessonHistory"); }, function () { sectionCycleCol("lessonHistory"); }, sectionHeight("lessonHistory"), function (px) { setSectionHeight("lessonHistory", px); });
+                    if (key === "examResults") return renderInlineExamSection(t.examResults, isEditing, function (next) { patch({ examResults: next }); }, function () { sectionMoveUp("examResults"); }, function () { sectionMoveDown("examResults"); }, function () { sectionCycleCol("examResults"); }, sectionHeight("examResults"), function (px) { setSectionHeight("examResults", px); });
                     return null;
                   }
                   var leftKeys = layout.filter(function (s) { return s.column === "left"; }).map(function (s) { return s.key; });
@@ -2250,9 +2318,9 @@ function App() {
                         })
                       )
                     ) : null,
-                    h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "28px", marginTop: "28px" } },
-                      h("div", null, leftKeys.map(renderSectionByKey)),
-                      h("div", null, rightKeys.map(renderSectionByKey))
+                    h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginTop: "28px" } },
+                      h("div", { style: { paddingRight: "28px", borderRight: "1px solid #E3DFD3" } }, leftKeys.map(renderSectionByKey)),
+                      h("div", { style: { paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
                     ),
                     renderInlineFeatureTiles(t.features, isEditing, function (next) { patch({ features: next }); }),
                     h("div", { style: { marginTop: "22px" } },
