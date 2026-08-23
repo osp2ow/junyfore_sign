@@ -743,12 +743,15 @@ function sectionResizeHandle(currentHeight, onResizeHeight) {
     e.preventDefault();
     var startY = e.touches ? e.touches[0].clientY : e.clientY;
     var startH = currentHeight || 0;
+    document.body.style.userSelect = "none";
     function onMove(ev) {
+      ev.preventDefault();
       var clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
       var next = Math.max(30, startH + (clientY - startY));
       onResizeHeight(next);
     }
     function onUp() {
+      document.body.style.userSelect = "";
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
       document.removeEventListener("touchmove", onMove);
@@ -759,11 +762,15 @@ function sectionResizeHandle(currentHeight, onResizeHeight) {
     document.addEventListener("touchmove", onMove, { passive: false });
     document.addEventListener("touchend", onUp);
   }
-  return h("div", {
-    onMouseDown: startResize, onTouchStart: startResize,
-    style: { height: "16px", marginTop: "2px", cursor: "ns-resize", display: "flex", alignItems: "center", justifyContent: "center" }
-  },
-    h("div", { style: { width: "40px", height: "4px", borderRadius: "2px", background: TC.border } })
+  return h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginTop: "4px" } },
+    h("button", { type: "button", onClick: function(){ onResizeHeight(Math.max(30, (currentHeight || 0) - 20)); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "− 높이"),
+    h("div", {
+      onMouseDown: startResize, onTouchStart: startResize,
+      style: { padding: "6px 14px", cursor: "ns-resize", display: "flex", alignItems: "center", justifyContent: "center", background: TC.surface2, borderRadius: "8px" }
+    },
+      h("div", { style: { width: "36px", height: "4px", borderRadius: "2px", background: TC.border } })
+    ),
+    h("button", { type: "button", onClick: function(){ onResizeHeight((currentHeight || 0) + 20); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "+ 높이")
   );
 }
 
@@ -2210,7 +2217,7 @@ function App() {
           );
         })
       ) : null,
-      adminTab === "teachers" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
+      adminTab === "teachers" ? h("div", { style: {} },
         h("div", { className: "section-title", style: { color: TC.text } }, "선생님 프로필 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
         teachersError ? h("div", { className: "error-banner" }, teachersError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchTeachers }, "다시 시도")) : null,
         teachersLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : null,
@@ -2344,7 +2351,7 @@ function App() {
         )
       )) : null,
 
-      adminTab === "pricing" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
+      adminTab === "pricing" ? h("div", { style: {} },
         h("div", { style: { marginBottom: "18px" } },
           h("span", { style: { display: "inline-block", fontSize: "12px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "5px 13px", borderRadius: "999px", marginBottom: "10px" } }, "주니퍼 실용음악학원"),
           h("div", { style: { fontSize: "27px", fontWeight: 800, color: TC.text } }, "레슨비 안내")
@@ -2379,7 +2386,7 @@ function App() {
         )
       ) : null,
 
-      adminTab === "curriculum" ? h("div", { className: "card", style: { background: TC.surface2, border: "1px solid " + TC.border, boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
+      adminTab === "curriculum" ? h("div", { style: {} },
         h("div", { className: "section-title", style: { color: TC.text } }, "커리큘럼 ", h("span", { className: "tag", style: { color: TC.accentBright, background: TC.accentSoft, borderColor: "transparent" } }, "관리자 전용")),
         curriculumError ? h("div", { className: "error-banner" }, curriculumError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: function(){ if (curriculumInstrument) fetchCurriculum(curriculumInstrument); } }, "다시 시도")) : null,
         !curriculumInstrument ? h(Frag, null,
