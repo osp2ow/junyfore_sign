@@ -739,10 +739,12 @@ function TeacherSectionLabel(props) {
 
 // 편집 중 섹션 하단에 뜨는 드래그 핸들 — 위아래로 끌면 그 섹션의 세로 높이(minHeight)를 조절합니다. 가로 폭은 열 구조상 고정이에요.
 function sectionResizeHandle(currentHeight, onResizeHeight) {
+  var BASE_HEIGHT = 220;
+  var STEP = 30;
   function startResize(e) {
     e.preventDefault();
     var startY = e.touches ? e.touches[0].clientY : e.clientY;
-    var startH = currentHeight || 0;
+    var startH = currentHeight || BASE_HEIGHT;
     document.body.style.userSelect = "none";
     function onMove(ev) {
       ev.preventDefault();
@@ -763,14 +765,14 @@ function sectionResizeHandle(currentHeight, onResizeHeight) {
     document.addEventListener("touchend", onUp);
   }
   return h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginTop: "4px" } },
-    h("button", { type: "button", onClick: function(){ onResizeHeight(Math.max(30, (currentHeight || 0) - 20)); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "− 높이"),
+    h("button", { type: "button", onClick: function(){ onResizeHeight(Math.max(30, (currentHeight || BASE_HEIGHT) - STEP)); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "− 높이"),
     h("div", {
       onMouseDown: startResize, onTouchStart: startResize,
       style: { padding: "6px 14px", cursor: "ns-resize", display: "flex", alignItems: "center", justifyContent: "center", background: TC.surface2, borderRadius: "8px" }
     },
       h("div", { style: { width: "36px", height: "4px", borderRadius: "2px", background: TC.border } })
     ),
-    h("button", { type: "button", onClick: function(){ onResizeHeight((currentHeight || 0) + 20); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "+ 높이")
+    h("button", { type: "button", onClick: function(){ onResizeHeight((currentHeight || BASE_HEIGHT) + STEP); }, style: { border: "1px solid " + TC.border, background: TC.surface2, color: TC.textMuted, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "6px" } }, "+ 높이")
   );
 }
 
@@ -1064,8 +1066,8 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
         return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
           editing
-            ? h("input", { type: "text", value: line, style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "15px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = e.target.value; onChange(next); } })
-            : h("span", { style: { fontSize: "15px", color: TC.text, lineHeight: "1.75" } }, line),
+            ? h("input", { type: "text", value: line, style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = e.target.value; onChange(next); } })
+            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, line),
           editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
@@ -1089,8 +1091,8 @@ function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, 
         return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
           editing
-            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "15px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
-            : h("span", { style: { fontSize: "15px", color: TC.text, lineHeight: "1.75" } }, it.a),
+            ? h("input", { type: "text", placeholder: "학교명", value: it.a || "", style: { flex: 1, border: "none", borderBottom: "1px dashed " + TC.border, background: "transparent", fontSize: "13.5px", color: TC.text, padding: "2px 0" }, onChange: function (e) { var next = items.slice(); next[idx] = Object.assign({}, next[idx], { a: e.target.value }); onChange(next); } })
+            : h("span", { style: { fontSize: "13.5px", color: TC.text, lineHeight: "1.7" } }, it.a),
           editing ? tinyMoveButtons(items, idx, onChange) : null,
           editing ? h("button", { type: "button", onClick: function () { var next = items.slice(); next.splice(idx, 1); onChange(next); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "13px", flex: "0 0 auto" } }, "×") : null
         );
