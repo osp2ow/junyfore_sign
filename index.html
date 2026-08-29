@@ -1062,7 +1062,7 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
   if (!editing && !items.filter(Boolean).length) return null;
   return h("div", { key: key, style: { marginBottom: "22px" } },
     sectionHeaderRow(title, editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px", height: height ? height + "px" : "auto", overflowY: height ? "auto" : "visible" } },
+    h("div", { style: { paddingLeft: "12px" } },
       items.map(function (line, idx) {
         return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
@@ -1075,7 +1075,7 @@ function renderInlineBulletSection(title, key, itemsRaw, editing, onChange, move
       }),
       editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([""])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
     ),
-    editing ? sectionResizeHandle(height, onResizeHeight) : null
+    null
   );
 }
 
@@ -1087,7 +1087,7 @@ function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, 
   var list = editing ? items : valid;
   return h("div", { style: { marginBottom: "22px" } },
     sectionHeaderRow("제자 입시 합격 결과", editing, moveUp, moveDown, cycleCol),
-    h("div", { style: { paddingLeft: "12px", height: height ? height + "px" : "auto", overflowY: height ? "auto" : "visible" } },
+    h("div", { style: { paddingLeft: "12px" } },
       list.map(function (it, idx) {
         return h("div", { key: idx, style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" } },
           h("span", { style: { color: TC.accentBright, flex: "0 0 auto" } }, "•"),
@@ -1100,7 +1100,7 @@ function renderInlineExamSection(itemsRaw, editing, onChange, moveUp, moveDown, 
       }),
       editing ? h("button", { type: "button", onClick: function () { onChange(items.concat([{ a: "" }])); }, style: { border: "none", background: "none", color: TC.accentBright, cursor: "pointer", fontSize: "12px", fontWeight: 700, padding: "4px 0" } }, "+ 추가") : null
     ),
-    editing ? sectionResizeHandle(height, onResizeHeight) : null
+    null
   );
 }
 
