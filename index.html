@@ -350,6 +350,18 @@
   .btn.brass{ background: var(--brass); color:#fff; }
   .btn.brass:disabled{ background:#DDCFA6; cursor:not-allowed; }
   .btn.ghost{ background:transparent; color: var(--ink-soft); border:1.5px solid var(--rule); word-break: keep-all; }
+  .btn.info-nav{
+    background:#fff;
+    color: var(--juniper-deep);
+    border: 1.5px solid var(--rule);
+    box-shadow: 0 2px 6px rgba(31,59,45,0.08), 0 6px 16px rgba(31,59,45,0.06);
+    font-weight: 700;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn.info-nav:active{
+    transform: scale(0.93);
+    box-shadow: 0 1px 3px rgba(31,59,45,0.08);
+  }
 
   .error-banner{
     background:#FBEDEA;
@@ -2135,18 +2147,24 @@ function App() {
               );
             })
           )
-        ) : h(Frag, null,
-          h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "18px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setTeacherInstrumentFilter(null); setExpandedTeacherId(null); } }, "← 악기 목록으로"),
-          teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).length === 0
-            ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
-            : null,
-          h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
-            teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).map(function (t) {
-              var isExpanded = expandedTeacherId === t.id;
-              return renderTeacherReadOnlyCard(t, isExpanded, function(){ setExpandedTeacherId(isExpanded ? null : t.id); });
-            })
-          )
-        )
+        ) : (function () {
+          var filtered = teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; });
+          var selected = filtered.filter(function (t) { return t.id === expandedTeacherId; })[0];
+          if (selected) {
+            return renderTeacherReadOnlyCard(selected, true, function(){ setExpandedTeacherId(null); });
+          }
+          return h(Frag, null,
+            h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "18px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setTeacherInstrumentFilter(null); setExpandedTeacherId(null); } }, "← 악기 목록으로"),
+            filtered.length === 0
+              ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
+              : null,
+            h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
+              filtered.map(function (t) {
+                return renderTeacherReadOnlyCard(t, false, function(){ setExpandedTeacherId(t.id); });
+              })
+            )
+          );
+        })()
       )
     );
   }
@@ -2159,12 +2177,6 @@ function App() {
           h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
             h("div", { style: { fontSize: "27px", fontWeight: 800, color: TC.text } }, "레슨비 안내"),
             h("button", { type: "button", onClick: function(){ setMode("form"); }, style: { padding: "9px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" } }, "← 등록 원서로")
-          )
-        ),
-        h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "14px", padding: "16px 20px", marginBottom: "20px" } },
-          h("div", { style: { fontSize: "14.5px", color: TC.textMuted, lineHeight: "1.9" } },
-            "· 레슨은 주 1회, 1시간씩 1대1로 진행됩니다.", h("br"),
-            "· 결제는 1개월 기준이 아닌 4회차 기준입니다."
           )
         ),
         h("div", { style: { display: "flex", gap: "4px", borderBottom: "1px solid " + TC.border, marginBottom: "20px" } },
@@ -2398,112 +2410,112 @@ function App() {
               );
             })
           )
-        ) : h(Frag, null,
-          h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" } },
-            h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setTeacherInstrumentFilter(null); setTeacherEditingId(null); } }, "← 악기 목록으로"),
-            h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, teacherInstrumentFilter, " 선생님")
-          ),
-          h("div", { style: { display: "flex", gap: "8px", marginBottom: "18px" } },
-            h("button", { type: "button", style: { flex: 1, padding: "15px 18px", borderRadius: "12px", fontSize: "15.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){ addTeacher({ instruments: [teacherInstrumentFilter] }); } }, "+ 새 선생님 추가"),
-            h("button", { type: "button", style: { flex: "0 0 auto", padding: "15px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, cursor: "pointer", background: TC.surface, color: TC.textMuted }, onClick: function(){ setTeacherImportOpen(!teacherImportOpen); if (!teacherImportOpen && !teacherImportText) setTeacherImportText(TEACHER_IMPORT_TEMPLATE); } }, "텍스트로 빠르게 추가")
-          ),
-          teacherImportOpen ? h("div", { style: { marginBottom: "18px", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "14px", padding: "16px" } },
-            h("div", { style: { fontSize: "12px", color: TC.textMuted, marginBottom: "10px", lineHeight: "1.6" } }, "PDF나 사진의 프로필 내용을 저(Claude)에게 정리해달라고 하시면, 아래 형식에 맞춰 붙여넣기용 텍스트를 드려요. 그걸 그대로 붙여넣고 \"가져오기\"를 누르면 자동으로 채워져요."),
-            h("textarea", { rows: 10, value: teacherImportText, onChange: function(e){ setTeacherImportText(e.target.value); }, style: { width: "100%", padding: "10px 12px", fontSize: "12.5px", fontFamily: "monospace", borderRadius: "9px", border: "1.5px solid var(--rule)", lineHeight: "1.6" } }),
-            h("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
-              h("button", { type: "button", style: { flex: 1, padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){
-                var parsed = parseTeacherImportText(teacherImportText);
-                if (!parsed.instruments || !parsed.instruments.length) parsed.instruments = [teacherInstrumentFilter];
-                addTeacher(parsed);
-                setTeacherImportOpen(false);
-                setTeacherImportText("");
-              } }, "가져오기"),
-              h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: function(){ setTeacherImportOpen(false); } }, "취소")
-            )
-          ) : null,
-          teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).length === 0
-            ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
-            : null,
-          h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
-          teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).map(function (t) {
-          var isExpanded = expandedTeacherId === t.id;
-          var isEditing = teacherEditingId === t.id;
-          return h("div", { key: t.id, style: {
-            gridColumn: isExpanded ? "1 / -1" : "auto",
-            background: TC.surface,
-            border: "1px solid " + TC.border,
-            borderRadius: "18px",
-            padding: isExpanded ? "22px" : "16px",
-            boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)"
-          } },
-            !isExpanded ? h("div", { style: { textAlign: "center", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
-                  t.photoUrl
-                    ? h("img", { src: t.photoUrl, style: { width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "14px", marginBottom: "12px", border: "2px solid " + TC.accentSoft, display: "block" } })
-                    : h("div", { style: { width: "100%", aspectRatio: "1 / 1", borderRadius: "14px", background: TC.surface2, marginBottom: "12px" } }),
-                  h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, t.name || "(이름 없음)"),
-                  t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : h("div", { style: { fontSize: "11px", color: TC.textFaint, marginTop: "6px" } }, "탭하여 프로필 작성")
+        ) : (function () {
+          var filtered = teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; });
+          var selectedTeacher = filtered.filter(function (t) { return t.id === expandedTeacherId; })[0];
+
+          if (selectedTeacher) {
+            var t = selectedTeacher;
+            var isEditing = teacherEditingId === t.id;
+            var layout = getSectionLayout(t);
+            function patch(p) { updateTeacherLocal(t.id, p); }
+            function sectionMoveUp(key) { patch({ sectionLayout: moveInColumn(getSectionLayout(t), key, "up") }); }
+            function sectionMoveDown(key) { patch({ sectionLayout: moveInColumn(getSectionLayout(t), key, "down") }); }
+            function sectionCycleCol(key) { patch({ sectionLayout: cycleColumn(getSectionLayout(t), key) }); }
+            function sectionHeight(key) { return t.sectionHeights && t.sectionHeights[key]; }
+            function setSectionHeight(key, px) {
+              var next = Object.assign({}, t.sectionHeights || {});
+              next[key] = px;
+              patch({ sectionHeights: next });
+            }
+            function renderSectionByKey(key) {
+              if (key === "education") return renderInlineBulletSection("학력사항", "education", t.education, isEditing, function (next) { patch({ education: next }); }, function () { sectionMoveUp("education"); }, function () { sectionMoveDown("education"); }, function () { sectionCycleCol("education"); }, sectionHeight("education"), function (px) { setSectionHeight("education", px); });
+              if (key === "career") return renderInlineBulletSection("경력", "career", t.career, isEditing, function (next) { patch({ career: next }); }, function () { sectionMoveUp("career"); }, function () { sectionMoveDown("career"); }, function () { sectionCycleCol("career"); }, sectionHeight("career"), function (px) { setSectionHeight("career", px); });
+              if (key === "lessonHistory") return renderInlineBulletSection("이력", "lessonHistory", t.lessonHistory, isEditing, function (next) { patch({ lessonHistory: next }); }, function () { sectionMoveUp("lessonHistory"); }, function () { sectionMoveDown("lessonHistory"); }, function () { sectionCycleCol("lessonHistory"); }, sectionHeight("lessonHistory"), function (px) { setSectionHeight("lessonHistory", px); });
+              if (key === "examResults") return renderInlineExamSection(t.examResults, isEditing, function (next) { patch({ examResults: next }); }, function () { sectionMoveUp("examResults"); }, function () { sectionMoveDown("examResults"); }, function () { sectionCycleCol("examResults"); }, sectionHeight("examResults"), function (px) { setSectionHeight("examResults", px); });
+              return null;
+            }
+            var leftKeys = layout.filter(function (s) { return s.column === "left"; }).map(function (s) { return s.key; });
+            var rightKeys = layout.filter(function (s) { return s.column === "right"; }).map(function (s) { return s.key; });
+            return h(Frag, null,
+              h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "14px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setExpandedTeacherId(null); setTeacherEditingId(null); } }, "← 목록으로 접기"),
+              h(TeacherHero, { t: t, editing: isEditing, onChange: patch, onPhotoUpload: function (file) { uploadTeacherPhoto(t, file); }, isPhotoUploading: teacherPhotoUploadingId === t.id }),
+              isEditing ? h("div", { style: { marginTop: "16px" } },
+                h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, marginBottom: "6px" } }, "담당 악기"),
+                h("div", { className: "pill-group" },
+                  ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
+                    var selected = (t.instruments || []).indexOf(i) !== -1;
+                    return h(Pill, { key: i, selected: selected, onClick: function(){
+                      var next = selected ? t.instruments.filter(function(x){return x!==i;}) : (t.instruments || []).concat([i]);
+                      patch({ instruments: next });
+                    } }, i);
+                  })
                 )
-              : (function () {
-                  var layout = getSectionLayout(t);
-                  function patch(p) { updateTeacherLocal(t.id, p); }
-                  function sectionMoveUp(key) { patch({ sectionLayout: moveInColumn(getSectionLayout(t), key, "up") }); }
-                  function sectionMoveDown(key) { patch({ sectionLayout: moveInColumn(getSectionLayout(t), key, "down") }); }
-                  function sectionCycleCol(key) { patch({ sectionLayout: cycleColumn(getSectionLayout(t), key) }); }
-                  function sectionHeight(key) { return t.sectionHeights && t.sectionHeights[key]; }
-                  function setSectionHeight(key, px) {
-                    var next = Object.assign({}, t.sectionHeights || {});
-                    next[key] = px;
-                    patch({ sectionHeights: next });
-                  }
-                  function renderSectionByKey(key) {
-                    if (key === "education") return renderInlineBulletSection("학력사항", "education", t.education, isEditing, function (next) { patch({ education: next }); }, function () { sectionMoveUp("education"); }, function () { sectionMoveDown("education"); }, function () { sectionCycleCol("education"); }, sectionHeight("education"), function (px) { setSectionHeight("education", px); });
-                    if (key === "career") return renderInlineBulletSection("경력", "career", t.career, isEditing, function (next) { patch({ career: next }); }, function () { sectionMoveUp("career"); }, function () { sectionMoveDown("career"); }, function () { sectionCycleCol("career"); }, sectionHeight("career"), function (px) { setSectionHeight("career", px); });
-                    if (key === "lessonHistory") return renderInlineBulletSection("이력", "lessonHistory", t.lessonHistory, isEditing, function (next) { patch({ lessonHistory: next }); }, function () { sectionMoveUp("lessonHistory"); }, function () { sectionMoveDown("lessonHistory"); }, function () { sectionCycleCol("lessonHistory"); }, sectionHeight("lessonHistory"), function (px) { setSectionHeight("lessonHistory", px); });
-                    if (key === "examResults") return renderInlineExamSection(t.examResults, isEditing, function (next) { patch({ examResults: next }); }, function () { sectionMoveUp("examResults"); }, function () { sectionMoveDown("examResults"); }, function () { sectionCycleCol("examResults"); }, sectionHeight("examResults"), function (px) { setSectionHeight("examResults", px); });
-                    return null;
-                  }
-                  var leftKeys = layout.filter(function (s) { return s.column === "left"; }).map(function (s) { return s.key; });
-                  var rightKeys = layout.filter(function (s) { return s.column === "right"; }).map(function (s) { return s.key; });
-                  return h(Frag, null,
-                    h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "14px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setExpandedTeacherId(null); setTeacherEditingId(null); } }, "← 목록으로 접기"),
-                    h(TeacherHero, { t: t, editing: isEditing, onChange: patch, onPhotoUpload: function (file) { uploadTeacherPhoto(t, file); }, isPhotoUploading: teacherPhotoUploadingId === t.id }),
-                    isEditing ? h("div", { style: { marginTop: "16px" } },
-                      h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, marginBottom: "6px" } }, "담당 악기"),
-                      h("div", { className: "pill-group" },
-                        ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
-                          var selected = (t.instruments || []).indexOf(i) !== -1;
-                          return h(Pill, { key: i, selected: selected, onClick: function(){
-                            var next = selected ? t.instruments.filter(function(x){return x!==i;}) : (t.instruments || []).concat([i]);
-                            patch({ instruments: next });
-                          } }, i);
-                        })
-                      )
-                    ) : null,
-                    h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginTop: "28px" } },
-                      h("div", { style: { paddingRight: "28px", borderRight: "1px solid #E3DFD3" } }, leftKeys.map(renderSectionByKey)),
-                      h("div", { style: { paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
-                    ),
-                    renderInlineFeatureTiles(t.features, isEditing, function (next) { patch({ features: next }); }),
-                    h("div", { style: { marginTop: "22px" } },
-                      isEditing
-                        ? h("div", { className: "field" },
-                            h("label", null, "레슨가능요일"),
-                            h("input", { type: "text", placeholder: "예: 월요일 / 수요일 / 금요일", value: t.lessonDays, onChange: function(e){ patch({ lessonDays: e.target.value }); } })
-                          )
-                        : (t.lessonDays ? h(Frag, null, h(TeacherSectionLabel, null, "레슨가능요일"), h("div", { style: { fontSize: "13.5px", color: TC.text, paddingLeft: "12px" } }, t.lessonDays)) : null)
-                    ),
-                    isEditing
-                      ? h("div", { style: { display: "flex", gap: "8px", marginTop: "18px" } },
-                          h("button", { type: "button", style: { flex: 1, padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, disabled: teacherSavingId === t.id, onClick: function(){ saveTeacher(t); setTeacherEditingId(null); } }, teacherSavingId === t.id ? "저장 중…" : "저장 후 보기로"),
-                          h("button", { type: "button", style: { flex: "0 0 auto", padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "1.5px solid #EBC6BC", background: "transparent", color: "var(--danger)", cursor: "pointer" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
-                        )
-                      : h("button", { type: "button", style: { width: "100%", marginTop: "18px", padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "1.5px solid " + TC.accentSoft, cursor: "pointer", background: TC.accentSoft, color: TC.accentBright }, onClick: function(){ setTeacherEditingId(t.id); } }, "프로필 수정")
-                  );
-                })()
+              ) : null,
+              h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginTop: "28px" } },
+                h("div", { style: { paddingRight: "28px", borderRight: "1px solid #E3DFD3" } }, leftKeys.map(renderSectionByKey)),
+                h("div", { style: { paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+              ),
+              renderInlineFeatureTiles(t.features, isEditing, function (next) { patch({ features: next }); }),
+              h("div", { style: { marginTop: "22px" } },
+                isEditing
+                  ? h("div", { className: "field" },
+                      h("label", null, "레슨가능요일"),
+                      h("input", { type: "text", placeholder: "예: 월요일 / 수요일 / 금요일", value: t.lessonDays, onChange: function(e){ patch({ lessonDays: e.target.value }); } })
+                    )
+                  : (t.lessonDays ? h(Frag, null, h(TeacherSectionLabel, null, "레슨가능요일"), h("div", { style: { fontSize: "13.5px", color: TC.text, paddingLeft: "12px" } }, t.lessonDays)) : null)
+              ),
+              isEditing
+                ? h("div", { style: { display: "flex", gap: "8px", marginTop: "18px" } },
+                    h("button", { type: "button", style: { flex: 1, padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, disabled: teacherSavingId === t.id, onClick: function(){ saveTeacher(t); setTeacherEditingId(null); } }, teacherSavingId === t.id ? "저장 중…" : "저장 후 보기로"),
+                    h("button", { type: "button", style: { flex: "0 0 auto", padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "1.5px solid #EBC6BC", background: "transparent", color: "var(--danger)", cursor: "pointer" }, onClick: function(){ deleteTeacher(t); } }, "삭제")
+                  )
+                : h("button", { type: "button", style: { width: "100%", marginTop: "18px", padding: "13px 18px", borderRadius: "12px", fontSize: "14px", fontWeight: 700, border: "1.5px solid " + TC.accentSoft, cursor: "pointer", background: TC.accentSoft, color: TC.accentBright }, onClick: function(){ setTeacherEditingId(t.id); } }, "프로필 수정")
+            );
+          }
+
+          return h(Frag, null,
+            h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" } },
+              h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setTeacherInstrumentFilter(null); setTeacherEditingId(null); } }, "← 악기 목록으로"),
+              h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, teacherInstrumentFilter, " 선생님")
+            ),
+            h("div", { style: { display: "flex", gap: "8px", marginBottom: "18px" } },
+              h("button", { type: "button", style: { flex: 1, padding: "15px 18px", borderRadius: "12px", fontSize: "15.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){ addTeacher({ instruments: [teacherInstrumentFilter] }); } }, "+ 새 선생님 추가"),
+              h("button", { type: "button", style: { flex: "0 0 auto", padding: "15px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, cursor: "pointer", background: TC.surface, color: TC.textMuted }, onClick: function(){ setTeacherImportOpen(!teacherImportOpen); if (!teacherImportOpen && !teacherImportText) setTeacherImportText(TEACHER_IMPORT_TEMPLATE); } }, "텍스트로 빠르게 추가")
+            ),
+            teacherImportOpen ? h("div", { style: { marginBottom: "18px", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "14px", padding: "16px" } },
+              h("div", { style: { fontSize: "12px", color: TC.textMuted, marginBottom: "10px", lineHeight: "1.6" } }, "PDF나 사진의 프로필 내용을 저(Claude)에게 정리해달라고 하시면, 아래 형식에 맞춰 붙여넣기용 텍스트를 드려요. 그걸 그대로 붙여넣고 \"가져오기\"를 누르면 자동으로 채워져요."),
+              h("textarea", { rows: 10, value: teacherImportText, onChange: function(e){ setTeacherImportText(e.target.value); }, style: { width: "100%", padding: "10px 12px", fontSize: "12.5px", fontFamily: "monospace", borderRadius: "9px", border: "1.5px solid var(--rule)", lineHeight: "1.6" } }),
+              h("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
+                h("button", { type: "button", style: { flex: 1, padding: "11px 14px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "none", cursor: "pointer", background: TC.accentBright, color: "#fff" }, onClick: function(){
+                  var parsed = parseTeacherImportText(teacherImportText);
+                  if (!parsed.instruments || !parsed.instruments.length) parsed.instruments = [teacherInstrumentFilter];
+                  addTeacher(parsed);
+                  setTeacherImportOpen(false);
+                  setTeacherImportText("");
+                } }, "가져오기"),
+                h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: function(){ setTeacherImportOpen(false); } }, "취소")
+              )
+            ) : null,
+            filtered.length === 0
+              ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
+              : null,
+            h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
+              filtered.map(function (t) {
+                return h("div", { key: t.id, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "16px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
+                  h("div", { style: { textAlign: "center", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
+                    t.photoUrl
+                      ? h("img", { src: t.photoUrl, style: { width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "14px", marginBottom: "12px", border: "2px solid " + TC.accentSoft, display: "block" } })
+                      : h("div", { style: { width: "100%", aspectRatio: "1 / 1", borderRadius: "14px", background: TC.surface2, marginBottom: "12px" } }),
+                    h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, t.name || "(이름 없음)"),
+                    t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : h("div", { style: { fontSize: "11px", color: TC.textFaint, marginTop: "6px" } }, "탭하여 프로필 작성")
+                  )
+                );
+              })
+            )
           );
-        })
-        )
-      )) : null,
+        })()
+      ) : null,
 
       adminTab === "pricing" ? h("div", { style: {} },
         h("div", { style: { marginBottom: "18px" } },
@@ -2991,9 +3003,9 @@ function App() {
         h("div", { className: "brand" }, "주니퍼 실용음악학원"),
         h("div", { className: "doc-title" }, "등 록 원 서")
       ),
-      h("div", { style: { display: "flex", gap: "8px", justifyContent: "center", marginBottom: "18px" } },
-        h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: function(){ setMode("publicTeachers"); } }, "선생님 소개"),
-        h("button", { type: "button", className: "btn ghost", style: { flex: "0 0 auto" }, onClick: function(){ setMode("publicPricing"); } }, "학원비 안내")
+      h("div", { style: { display: "flex", gap: "10px", justifyContent: "center", marginBottom: "18px" } },
+        h("button", { type: "button", className: "btn info-nav", style: { flex: "0 0 auto", padding: "12px 20px" }, onClick: function(){ setMode("publicTeachers"); } }, "선생님 소개"),
+        h("button", { type: "button", className: "btn info-nav", style: { flex: "0 0 auto", padding: "12px 20px" }, onClick: function(){ setMode("publicPricing"); } }, "학원비 안내")
       ),
       h("div", { className: "staff" }),
       h(ProgressBar, { part: part }),
