@@ -1159,14 +1159,12 @@ function renderInlineFeatureTiles(featuresRaw, editing, onChange) {
 function renderTeacherReadOnlyCard(t, isExpanded, onToggle) {
   var noop = function () {};
   if (!isExpanded) {
-    return h("div", { key: t.id, onClick: onToggle, style: { cursor: "pointer", display: "flex", alignItems: "center", gap: "16px", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "20px 22px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
+    return h("div", { key: t.id, onClick: onToggle, style: { cursor: "pointer", textAlign: "center", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "16px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
       t.photoUrl
-        ? h("img", { src: t.photoUrl, style: { width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto", border: "3px solid " + TC.accentSoft } })
-        : h("div", { style: { width: "72px", height: "72px", borderRadius: "50%", background: TC.surface2, flex: "0 0 auto" } }),
-      h("div", { style: { flex: 1 } },
-        h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "17px" } }, t.name || "(이름 없음)"),
-        t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : null
-      )
+        ? h("img", { src: t.photoUrl, style: { width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "14px", marginBottom: "12px", border: "2px solid " + TC.accentSoft, display: "block" } })
+        : h("div", { style: { width: "100%", aspectRatio: "1 / 1", borderRadius: "14px", background: TC.surface2, marginBottom: "12px" } }),
+      h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, t.name || "(이름 없음)"),
+      t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : null
     );
   }
   var layout = getSectionLayout(t);
@@ -1179,7 +1177,7 @@ function renderTeacherReadOnlyCard(t, isExpanded, onToggle) {
   }
   var leftKeys = layout.filter(function (s) { return s.column === "left"; }).map(function (s) { return s.key; });
   var rightKeys = layout.filter(function (s) { return s.column === "right"; }).map(function (s) { return s.key; });
-  return h("div", { key: t.id, style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
+  return h("div", { key: t.id, style: { gridColumn: "1 / -1", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
     h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "14px", color: TC.accentBright, fontSize: "12.5px" }, onClick: onToggle }, "← 목록으로 접기"),
     h(TeacherHero, { t: t, editing: false, onChange: noop, onPhotoUpload: noop, isPhotoUploading: false }),
     h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginTop: "28px" } },
@@ -2142,7 +2140,7 @@ function App() {
           teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).length === 0
             ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
             : null,
-          h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
+          h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
             teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).map(function (t) {
               var isExpanded = expandedTeacherId === t.id;
               return renderTeacherReadOnlyCard(t, isExpanded, function(){ setExpandedTeacherId(isExpanded ? null : t.id); });
@@ -2426,25 +2424,24 @@ function App() {
           teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).length === 0
             ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
             : null,
-          h("div", { style: { display: "grid", gridTemplateColumns: "1fr", gap: "14px" } },
+          h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" } },
           teachers.filter(function (t) { return (t.instruments || []).indexOf(teacherInstrumentFilter) !== -1; }).map(function (t) {
           var isExpanded = expandedTeacherId === t.id;
           var isEditing = teacherEditingId === t.id;
           return h("div", { key: t.id, style: {
+            gridColumn: isExpanded ? "1 / -1" : "auto",
             background: TC.surface,
             border: "1px solid " + TC.border,
             borderRadius: "18px",
-            padding: isExpanded ? "22px" : "20px 22px",
+            padding: isExpanded ? "22px" : "16px",
             boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)"
           } },
-            !isExpanded ? h("div", { style: { display: "flex", alignItems: "center", gap: "16px", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
+            !isExpanded ? h("div", { style: { textAlign: "center", cursor: "pointer" }, onClick: function(){ setExpandedTeacherId(t.id); setTeacherEditingId(null); } },
                   t.photoUrl
-                    ? h("img", { src: t.photoUrl, style: { width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", flex: "0 0 auto", border: "3px solid " + TC.accentSoft } })
-                    : h("div", { style: { width: "72px", height: "72px", borderRadius: "50%", background: TC.surface2, flex: "0 0 auto" } }),
-                  h("div", { style: { flex: 1 } },
-                    h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "17px" } }, t.name || "(이름 없음)"),
-                    t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : h("div", { style: { fontSize: "12px", color: TC.textFaint, marginTop: "6px" } }, "탭하여 프로필 작성")
-                  )
+                    ? h("img", { src: t.photoUrl, style: { width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "14px", marginBottom: "12px", border: "2px solid " + TC.accentSoft, display: "block" } })
+                    : h("div", { style: { width: "100%", aspectRatio: "1 / 1", borderRadius: "14px", background: TC.surface2, marginBottom: "12px" } }),
+                  h("div", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, t.name || "(이름 없음)"),
+                  t.role ? h("span", { style: { marginTop: "6px", display: "inline-block", fontSize: "11px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "3px 10px", borderRadius: "999px" } }, t.role) : h("div", { style: { fontSize: "11px", color: TC.textFaint, marginTop: "6px" } }, "탭하여 프로필 작성")
                 )
               : (function () {
                   var layout = getSectionLayout(t);
