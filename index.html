@@ -164,7 +164,7 @@
     font-size:12px;
     margin-left:6px;
   }
-  input[type="text"], input[type="tel"], input[type="date"], input[type="password"], input[type="email"]{
+  input[type="text"], input[type="tel"], input[type="date"], input[type="password"], input[type="email"], select{
     width:100%;
     min-width:0;
     box-sizing:border-box;
@@ -584,6 +584,26 @@ function formatKRW(n) {
   return Number(n).toLocaleString("ko-KR") + "원";
 }
 
+// 첫 수업 시간 — 오전 11시부터 오후 9시까지 1시간 단위
+function formatHourLabel(h) {
+  if (h === 12) return "오후 12시";
+  if (h < 12) return "오전 " + h + "시";
+  return "오후 " + (h - 12) + "시";
+}
+var FIRST_LESSON_TIME_OPTIONS = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].map(function (h) {
+  return { value: (h < 10 ? "0" + h : "" + h) + ":00", label: formatHourLabel(h) };
+});
+function formatFirstLesson(dateStr, timeStr) {
+  if (!dateStr && !timeStr) return "";
+  var datePart = dateStr ? dateStr.replace(/-/g, ".") : "";
+  var timePart = "";
+  if (timeStr) {
+    var hour = parseInt(timeStr.split(":")[0], 10);
+    if (!isNaN(hour)) timePart = formatHourLabel(hour);
+  }
+  return [datePart, timePart].filter(Boolean).join(" ");
+}
+
 // 네트워크가 느리거나 응답이 없을 때 "불러오는 중"에서 영영 멈추지 않도록, 일정 시간 지나면 에러로 처리합니다.
 function withTimeout(promise, ms, message) {
   return new Promise(function (resolve, reject) {
@@ -665,7 +685,11 @@ function buildSummaryTree(data) {
       ? h(Frag, { key: "multi" },
           subjects.map(function (s, idx) {
             var sp = subjectPricesLocal[idx] || {};
-            return summaryRow("과목 " + (idx + 1), s.instrument + " · " + s.enrollType + " · " + s.duration + (sp.discounted != null ? " · " + formatKRW(sp.discounted) : ""));
+            var flText = formatFirstLesson(s.firstLessonDate, s.firstLessonTime);
+            return h(Frag, { key: idx },
+              summaryRow("과목 " + (idx + 1), s.instrument + " · " + s.enrollType + " · " + s.duration + (sp.discounted != null ? " · " + formatKRW(sp.discounted) : "")),
+              flText ? summaryRow("과목 " + (idx + 1) + " 첫 수업", flText) : null
+            );
           }),
           summaryRow("총 수강료", (data.price !== undefined && data.price !== null && data.price !== "") ? formatKRW(data.price) : "-")
         )
@@ -673,6 +697,7 @@ function buildSummaryTree(data) {
           summaryRow("등록 악기", data.instrument),
           summaryRow("등록 유형", data.enrollType),
           summaryRow("등록 기간", data.duration),
+          formatFirstLesson(data.firstLessonDate, data.firstLessonTime) ? summaryRow("첫 수업", formatFirstLesson(data.firstLessonDate, data.firstLessonTime)) : null,
           data.discountType ? summaryRow("할인 유형", data.discountType) : null,
           (data.discountType === "가족할인" && data.familyMemberName) ? summaryRow("가족 관계 수강생", data.familyMemberName) : null,
           summaryRow("최종 결제 금액", (data.price !== undefined && data.price !== null && data.price !== "") ? formatKRW(data.price) : "-")
@@ -1393,6 +1418,8 @@ function emptyForm() {
     instrument: "",
     enrollType: "",
     duration: "",
+    firstLessonDate: "",
+    firstLessonTime: "",
     discountType: "",
     familyMemberName: "",
     subjects: [],
@@ -1844,9 +1871,9 @@ function App() {
       var patch = { discountType: next };
       if (next === "두과목 이상 할인" && (!f.subjects || f.subjects.length < 2)) {
         var firstSubject = f.instrument
-          ? { instrument: f.instrument, enrollType: f.enrollType, duration: f.duration }
-          : { instrument: "", enrollType: "", duration: "" };
-        patch.subjects = [firstSubject, { instrument: "", enrollType: "", duration: "" }];
+          ? { instrument: f.instrument, enrollType: f.enrollType, duration: f.duration, firstLessonDate: f.firstLessonDate, firstLessonTime: f.firstLessonTime }
+          : { instrument: "", enrollType: "", duration: "", firstLessonDate: "", firstLessonTime: "" };
+        patch.subjects = [firstSubject, { instrument: "", enrollType: "", duration: "", firstLessonDate: "", firstLessonTime: "" }];
       }
       return Object.assign({}, f, patch);
     });
@@ -1861,7 +1888,7 @@ function App() {
   }
 
   function addSubject() {
-    setForm(function (f) { return Object.assign({}, f, { subjects: f.subjects.concat([{ instrument: "", enrollType: "", duration: "" }]) }); });
+    setForm(function (f) { return Object.assign({}, f, { subjects: f.subjects.concat([{ instrument: "", enrollType: "", duration: "", firstLessonDate: "", firstLessonTime: "" }]) }); });
   }
 
   function removeSubject(idx) {
@@ -1918,11 +1945,15 @@ function App() {
         if (!s.instrument) return "과목 " + (i + 1) + "의 악기를 선택해 주세요.";
         if (!s.enrollType) return "과목 " + (i + 1) + "의 등록 유형을 선택해 주세요.";
         if (!s.duration) return "과목 " + (i + 1) + "의 등록 기간을 선택해 주세요.";
+        if (!s.firstLessonDate) return "과목 " + (i + 1) + "의 첫 수업 날짜를 선택해 주세요.";
+        if (!s.firstLessonTime) return "과목 " + (i + 1) + "의 첫 수업 시간을 선택해 주세요.";
       }
     } else {
       if (!form.instrument) return "등록 악기를 선택해 주세요.";
       if (!form.enrollType) return "등록 유형을 선택해 주세요.";
       if (!form.duration) return "등록 기간을 선택해 주세요.";
+      if (!form.firstLessonDate) return "첫 수업 날짜를 선택해 주세요.";
+      if (!form.firstLessonTime) return "첫 수업 시간을 선택해 주세요.";
     }
     if (form.discountType === "가족할인" && !form.familyMemberName.trim()) return "가족할인 대상 수강생 이름을 입력해 주세요.";
     for (var j = 0; j < form.rulesChecked.length; j++) {
@@ -2186,6 +2217,12 @@ function App() {
               rec.motherName ? summaryRow("어머니 성함", rec.motherName) : null,
               rec.motherPhone ? summaryRow("어머니 전화번호", rec.motherPhone) : null,
               summaryRow("유입 경로", rec.source === "기타" ? ("기타 - " + rec.sourceEtc) : rec.source),
+              (rec.discountType === "두과목 이상 할인" && rec.subjects && rec.subjects.length)
+                ? h(Frag, null, rec.subjects.map(function (s, idx) {
+                    var flText = formatFirstLesson(s.firstLessonDate, s.firstLessonTime);
+                    return flText ? summaryRow("과목 " + (idx + 1) + " 첫 수업", flText) : null;
+                  }))
+                : (formatFirstLesson(rec.firstLessonDate, rec.firstLessonTime) ? summaryRow("첫 수업", formatFirstLesson(rec.firstLessonDate, rec.firstLessonTime)) : null),
               rec.discountType ? summaryRow("할인 유형", rec.discountType) : null,
               (rec.discountType === "가족할인" && rec.familyMemberName) ? summaryRow("가족 관계 수강생", rec.familyMemberName) : null,
               Array.isArray(rec.smsResults) && rec.smsResults.length ? h("div", { style: { marginTop: "10px" } },
@@ -2698,6 +2735,19 @@ function App() {
                   ) : null
                 )
           )
+        ) : null,
+
+        form.enrollType ? h("div", { className: "field" },
+          h("label", null, "첫 수업 날짜 / 시간"),
+          h("div", { className: "row2" },
+            h("input", { type: "date", value: form.firstLessonDate, onChange: function(e){ set("firstLessonDate", e.target.value); } }),
+            h("select", { value: form.firstLessonTime, onChange: function(e){ set("firstLessonTime", e.target.value); } },
+              h("option", { value: "" }, "시간 선택"),
+              FIRST_LESSON_TIME_OPTIONS.map(function (t) {
+                return h("option", { key: t.value, value: t.value }, t.label);
+              })
+            )
+          )
         ) : null
       ) : h(Frag, null,
         renderDiscountField(),
@@ -2735,6 +2785,18 @@ function App() {
                       opt.key + (opt.note ? " · " + opt.note : "")
                     );
                   })
+                ) : null,
+                s.enrollType ? h("div", { style: { marginBottom: "10px" } },
+                  h("label", { style: { display: "block", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "6px" } }, "이 과목 첫 수업 날짜 / 시간"),
+                  h("div", { className: "row2" },
+                    h("input", { type: "date", value: s.firstLessonDate, onChange: function(e){ updateSubject(idx, { firstLessonDate: e.target.value }); } }),
+                    h("select", { value: s.firstLessonTime, onChange: function(e){ updateSubject(idx, { firstLessonTime: e.target.value }); } },
+                      h("option", { value: "" }, "시간 선택"),
+                      FIRST_LESSON_TIME_OPTIONS.map(function (t) {
+                        return h("option", { key: t.value, value: t.value }, t.label);
+                      })
+                    )
+                  )
                 ) : null,
                 sp.base !== null ? h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)" } },
                   "이 과목 수강료: " + formatKRW(sp.discounted) + " (과목당 할인 적용)"
