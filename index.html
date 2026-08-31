@@ -767,6 +767,24 @@ function Pill(props) {
   }, children);
 }
 
+function BackButton(props) {
+  return h("button", {
+    type: "button",
+    onClick: props.onClick,
+    style: Object.assign({
+      alignSelf: "flex-start",
+      padding: "11px 18px",
+      borderRadius: "10px",
+      fontSize: "14px",
+      fontWeight: 700,
+      border: "1.5px solid " + TC.border,
+      background: TC.surface,
+      color: TC.textMuted,
+      cursor: "pointer"
+    }, props.style || {})
+  }, props.children);
+}
+
 function TeacherSectionLabel(props) {
   return h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" } },
     h("div", { style: { width: "4px", height: "16px", borderRadius: "2px", background: TC.accentBright, flex: "0 0 auto" } }),
@@ -1190,11 +1208,12 @@ function renderTeacherReadOnlyCard(t, isExpanded, onToggle) {
   var leftKeys = layout.filter(function (s) { return s.column === "left"; }).map(function (s) { return s.key; });
   var rightKeys = layout.filter(function (s) { return s.column === "right"; }).map(function (s) { return s.key; });
   return h("div", { key: t.id, style: { flex: "1", boxSizing: "border-box", gridColumn: "1 / -1", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
-    h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "14px", color: TC.accentBright, fontSize: "12.5px" }, onClick: onToggle }, "← 목록으로 접기"),
+    h(BackButton, { onClick: onToggle, style: { marginBottom: "16px" } }, "← 목록으로 접기"),
     h(TeacherHero, { t: t, editing: false, onChange: noop, onPhotoUpload: noop, isPhotoUploading: false }),
-    h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginTop: "28px" } },
-      h("div", { style: { paddingRight: "28px", borderRight: "1px solid #E3DFD3" } }, leftKeys.map(renderSectionByKey)),
-      h("div", { style: { paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+    h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1px 1fr", columnGap: "28px", marginTop: "28px" } },
+      h("div", null, leftKeys.map(renderSectionByKey)),
+      h("div", { style: { background: "#E3DFD3", marginTop: "6px", marginBottom: "6px" } }),
+      h("div", null, rightKeys.map(renderSectionByKey))
     ),
     renderInlineFeatureTiles(t.features, false, noop),
     t.lessonDays ? h("div", { style: { marginTop: "22px" } }, h(TeacherSectionLabel, null, "레슨가능요일"), h("div", { style: { fontSize: "13.5px", color: TC.text, paddingLeft: "12px" } }, t.lessonDays)) : null
@@ -2129,7 +2148,7 @@ function App() {
       h("div", { style: { maxWidth: "100%", width: "100%", margin: "0 auto", padding: "28px 16px 80px", boxSizing: "border-box", display: "flex", flexDirection: "column", flex: "1" } },
         h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" } },
           h("div", { style: { fontFamily: "'PretendardVariable','Pretendard',sans-serif", fontWeight: 700, fontSize: "20px", color: TC.text } }, "선생님 소개"),
-          h("button", { type: "button", onClick: function(){ setMode("form"); setTeacherInstrumentFilter(null); setExpandedTeacherId(null); }, style: { padding: "9px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" } }, "← 등록 원서로")
+          h(BackButton, { onClick: function(){ setMode("form"); setTeacherInstrumentFilter(null); setExpandedTeacherId(null); } }, "← 등록 원서로")
         ),
         teachersError ? h("div", { className: "error-banner", style: { marginBottom: "14px" } }, teachersError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchTeachers }, "다시 시도")) : null,
         teachersLoading ? h("div", { style: { padding: "30px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : null,
@@ -2155,7 +2174,7 @@ function App() {
             return renderTeacherReadOnlyCard(selected, true, function(){ setExpandedTeacherId(null); });
           }
           return h(Frag, null,
-            h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "18px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setTeacherInstrumentFilter(null); setExpandedTeacherId(null); } }, "← 악기 목록으로"),
+            h(BackButton, { onClick: function(){ setTeacherInstrumentFilter(null); setExpandedTeacherId(null); }, style: { marginBottom: "18px" } }, "← 악기 목록으로"),
             filtered.length === 0
               ? h("div", { style: { padding: "30px 16px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "14px" } }, "아직 등록된 선생님이 없어요.")
               : null,
@@ -2178,7 +2197,7 @@ function App() {
           h("span", { style: { display: "inline-block", fontSize: "12px", fontWeight: 700, color: TC.accentBright, background: TC.accentSoft, padding: "5px 13px", borderRadius: "999px", marginBottom: "10px" } }, "주니퍼 실용음악학원"),
           h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
             h("div", { style: { fontSize: "27px", fontWeight: 800, color: TC.text } }, "레슨비 안내"),
-            h("button", { type: "button", onClick: function(){ setMode("form"); }, style: { padding: "9px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" } }, "← 등록 원서로")
+            h(BackButton, { onClick: function(){ setMode("form"); } }, "← 등록 원서로")
           )
         ),
         h("div", { style: { display: "flex", gap: "4px", borderBottom: "1px solid " + TC.border, marginBottom: "20px" } },
@@ -2224,7 +2243,7 @@ function App() {
             h("input", { type: "password", style: { width: "100%", padding: "12px 14px", fontSize: "15px", borderRadius: "10px", border: "1.5px solid " + TC.border }, value: loginPassword, onChange: function(e){ setLoginPassword(e.target.value); }, onKeyDown: function(e){ if (e.key === "Enter") handleAdminLogin(); } })
           ),
           h("div", { style: { display: "flex", gap: "8px" } },
-            h("button", { type: "button", style: { flex: "0 0 auto", padding: "13px 16px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid " + TC.border, background: "transparent", color: TC.textMuted, cursor: "pointer" }, onClick: function(){ setMode("form"); } }, "← 등록 원서로"),
+            h("button", { type: "button", style: { flex: "0 0 auto", padding: "13px 16px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, border: "1.5px solid " + TC.border, background: "transparent", color: TC.textMuted, cursor: "pointer" }, onClick: function(){ setMode("form"); } }, "← 등록 원서로"),
             h("button", { type: "button", style: { flex: 1, padding: "13px 16px", borderRadius: "10px", fontSize: "14.5px", fontWeight: 700, border: "none", background: TC.accentBright, color: "#fff", cursor: "pointer" }, disabled: loginBusy, onClick: handleAdminLogin }, loginBusy ? "로그인 중…" : "로그인")
           )
         )
@@ -2440,7 +2459,7 @@ function App() {
             var leftKeys = layout.filter(function (s) { return s.column === "left"; }).map(function (s) { return s.key; });
             var rightKeys = layout.filter(function (s) { return s.column === "right"; }).map(function (s) { return s.key; });
             return h("div", { style: { flex: "1", boxSizing: "border-box", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
-              h("button", { type: "button", className: "link-btn", style: { padding: 0, marginBottom: "14px", color: TC.accentBright, fontSize: "12.5px" }, onClick: function(){ setExpandedTeacherId(null); setTeacherEditingId(null); } }, "← 목록으로 접기"),
+              h(BackButton, { onClick: function(){ setExpandedTeacherId(null); setTeacherEditingId(null); }, style: { marginBottom: "16px" } }, "← 목록으로 접기"),
               h(TeacherHero, { t: t, editing: isEditing, onChange: patch, onPhotoUpload: function (file) { uploadTeacherPhoto(t, file); }, isPhotoUploading: teacherPhotoUploadingId === t.id }),
               isEditing ? h("div", { style: { marginTop: "16px" } },
                 h("div", { style: { fontSize: "11.5px", fontWeight: 700, color: TC.textMuted, marginBottom: "6px" } }, "담당 악기"),
@@ -2454,9 +2473,10 @@ function App() {
                   })
                 )
               ) : null,
-              h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginTop: "28px" } },
-                h("div", { style: { paddingRight: "28px", borderRight: "1px solid #E3DFD3" } }, leftKeys.map(renderSectionByKey)),
-                h("div", { style: { paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+              h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1px 1fr", columnGap: "28px", marginTop: "28px" } },
+                h("div", null, leftKeys.map(renderSectionByKey)),
+                h("div", { style: { background: "#E3DFD3", marginTop: "6px", marginBottom: "6px" } }),
+                h("div", null, rightKeys.map(renderSectionByKey))
               ),
               renderInlineFeatureTiles(t.features, isEditing, function (next) { patch({ features: next }); }),
               h("div", { style: { marginTop: "22px" } },
@@ -2478,7 +2498,7 @@ function App() {
 
           return h(Frag, null,
             h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" } },
-              h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setTeacherInstrumentFilter(null); setTeacherEditingId(null); } }, "← 악기 목록으로"),
+              h(BackButton, { onClick: function(){ setTeacherInstrumentFilter(null); setTeacherEditingId(null); } }, "← 악기 목록으로"),
               h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, teacherInstrumentFilter, " 선생님")
             ),
             h("div", { style: { display: "flex", gap: "8px", marginBottom: "18px" } },
@@ -2576,7 +2596,7 @@ function App() {
           var stages = (cur && cur.stages) || [];
           return h(Frag, null,
             h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" } },
-              h("button", { type: "button", className: "link-btn", style: { padding: 0, color: TC.accentBright }, onClick: function(){ setCurriculumInstrument(null); setCurriculumEditing(false); } }, "← 악기 목록으로"),
+              h(BackButton, { onClick: function(){ setCurriculumInstrument(null); setCurriculumEditing(false); } }, "← 악기 목록으로"),
               h("span", { style: { fontWeight: 700, color: TC.text, fontSize: "16px" } }, curriculumInstrument, " 커리큘럼")
             ),
             curriculumLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: TC.textMuted } }, "불러오는 중…") : h("div", { style: { background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } },
@@ -2628,7 +2648,7 @@ function App() {
         })()
       ) : null,
       h("div", { style: { marginTop: "8px" } },
-        h("button", { type: "button", style: { width: "100%", padding: "13px 16px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" }, onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
+        h("button", { type: "button", style: { width: "100%", padding: "13px 16px", borderRadius: "10px", fontSize: "14px", fontWeight: 700, border: "1.5px solid " + TC.border, background: TC.surface, color: TC.textMuted, cursor: "pointer" }, onClick: function(){ setMode("form"); } }, "← 등록 원서 작성 화면으로")
       ),
       h("div", { ref: adminPrintRef, style: { position: "absolute", left: "-9999px", top: 0, width: "700px", background: "#ffffff", padding: "40px", fontFamily: "'PretendardVariable','Pretendard',sans-serif", color: "#232323" } },
         pdfRecord ? buildSummaryTree(pdfRecord) : null
