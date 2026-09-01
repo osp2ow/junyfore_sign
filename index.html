@@ -1216,10 +1216,12 @@ function renderTeacherReadOnlyCard(t, isExpanded, onToggle) {
   return h("div", { key: t.id, style: { flex: "1", boxSizing: "border-box", gridColumn: "1 / -1", background: TC.surface, border: "1px solid " + TC.border, borderRadius: "18px", padding: "22px", boxShadow: "0 2px 10px rgba(23,150,138,0.08)" } },
     h(BackButton, { onClick: onToggle, style: { marginBottom: "16px" } }, "← 목록으로 접기"),
     h(TeacherHero, { t: t, editing: false, onChange: noop, onPhotoUpload: noop, isPhotoUploading: false }),
-    h("div", { style: { display: "flex", alignItems: "stretch", marginTop: "28px" } },
-      h("div", { style: { flex: "1", minWidth: 0, paddingRight: "28px" } }, leftKeys.map(renderSectionByKey)),
-      h("div", { style: { width: "1px", flex: "0 0 auto", background: "#E3DFD3", marginTop: "6px", marginBottom: "6px" } }),
-      h("div", { style: { flex: "1", minWidth: 0, paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+    h("div", { style: { position: "relative", marginTop: "28px" } },
+      h("div", { style: { display: "flex" } },
+        h("div", { style: { flex: "1", minWidth: 0, paddingRight: "28px" } }, leftKeys.map(renderSectionByKey)),
+        h("div", { style: { flex: "1", minWidth: 0, paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+      ),
+      h("div", { style: { position: "absolute", top: "6px", bottom: "6px", left: "50%", width: "1px", background: "#E3DFD3" } })
     ),
     renderInlineFeatureTiles(t.features, false, noop),
     t.lessonDays ? h("div", { style: { marginTop: "22px" } }, h(TeacherSectionLabel, null, "레슨가능요일"), h("div", { style: { fontSize: "13.5px", color: TC.text, paddingLeft: "12px" } }, t.lessonDays)) : null
@@ -2479,10 +2481,12 @@ function App() {
                   })
                 )
               ) : null,
-              h("div", { style: { display: "flex", alignItems: "stretch", marginTop: "28px" } },
-                h("div", { style: { flex: "1", minWidth: 0, paddingRight: "28px" } }, leftKeys.map(renderSectionByKey)),
-                h("div", { style: { width: "1px", flex: "0 0 auto", background: "#E3DFD3", marginTop: "6px", marginBottom: "6px" } }),
-                h("div", { style: { flex: "1", minWidth: 0, paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+              h("div", { style: { position: "relative", marginTop: "28px" } },
+                h("div", { style: { display: "flex" } },
+                  h("div", { style: { flex: "1", minWidth: 0, paddingRight: "28px" } }, leftKeys.map(renderSectionByKey)),
+                  h("div", { style: { flex: "1", minWidth: 0, paddingLeft: "28px" } }, rightKeys.map(renderSectionByKey))
+                ),
+                h("div", { style: { position: "absolute", top: "6px", bottom: "6px", left: "50%", width: "1px", background: "#E3DFD3" } })
               ),
               renderInlineFeatureTiles(t.features, isEditing, function (next) { patch({ features: next }); }),
               h("div", { style: { marginTop: "22px" } },
