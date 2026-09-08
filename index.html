@@ -1511,6 +1511,9 @@ function emptyConsultForm() {
     trialLesson: "",
     trialPreferences: [
       { date: "", time: "" }
+    ],
+    regularPreferences: [
+      { date: "", time: "" }
     ]
   };
 }
@@ -1609,27 +1612,33 @@ function App() {
     });
   }
 
-  function updateTrialPreference(idx, patch) {
+  function updatePreference(field, idx, patch) {
     setConsultFormState_(function (f) {
-      var prefs = f.trialPreferences.slice();
+      var prefs = f[field].slice();
       prefs[idx] = Object.assign({}, prefs[idx], patch);
-      return Object.assign({}, f, { trialPreferences: prefs });
+      var next = Object.assign({}, f);
+      next[field] = prefs;
+      return next;
     });
   }
 
-  function addTrialPreference() {
+  function addPreference(field) {
     setConsultFormState_(function (f) {
-      if (f.trialPreferences.length >= 3) return f;
-      return Object.assign({}, f, { trialPreferences: f.trialPreferences.concat([{ date: "", time: "" }]) });
+      if (f[field].length >= 3) return f;
+      var next = Object.assign({}, f);
+      next[field] = f[field].concat([{ date: "", time: "" }]);
+      return next;
     });
   }
 
-  function removeTrialPreference(idx) {
+  function removePreference(field, idx) {
     setConsultFormState_(function (f) {
-      if (f.trialPreferences.length <= 1) return f;
-      var prefs = f.trialPreferences.slice();
+      if (f[field].length <= 1) return f;
+      var prefs = f[field].slice();
       prefs.splice(idx, 1);
-      return Object.assign({}, f, { trialPreferences: prefs });
+      var next = Object.assign({}, f);
+      next[field] = prefs;
+      return next;
     });
   }
 
@@ -1640,6 +1649,9 @@ function App() {
     if (!consultForm.trialLesson) return "체험레슨 신청 여부를 선택해 주세요.";
     if (consultForm.trialLesson === "신청") {
       if (!consultForm.trialPreferences[0].date.trim() || !consultForm.trialPreferences[0].time.trim()) return "체험레슨 희망 날짜/시간 1순위를 입력해 주세요.";
+    }
+    if (consultForm.trialLesson === "미신청") {
+      if (!consultForm.regularPreferences[0].date.trim() || !consultForm.regularPreferences[0].time.trim()) return "정규수업 희망 날짜/시간 1순위를 입력해 주세요.";
     }
     return "";
   }
@@ -2411,26 +2423,34 @@ function App() {
           )
         ),
 
-        consultForm.trialLesson === "신청" ? h(Frag, null,
-          consultForm.trialPreferences.map(function (p, idx) {
-            return h("div", { className: "row2", key: idx, style: { alignItems: "flex-end" } },
-              h("div", { className: "field" },
-                h("label", null, (idx + 1) + "순위 희망 날짜"),
-                h("input", { type: "text", placeholder: "예: 9월 15일 월요일", value: p.date, onChange: function(e){ updateTrialPreference(idx, { date: e.target.value }); } })
-              ),
-              h("div", { className: "field", style: { display: "flex", gap: "8px", alignItems: "flex-end" } },
-                h("div", { style: { flex: 1 } },
-                  h("label", null, (idx + 1) + "순위 희망 시간"),
-                  h("input", { type: "text", placeholder: "예: 오후 3시", value: p.time, onChange: function(e){ updateTrialPreference(idx, { time: e.target.value }); } })
-                ),
-                idx > 0 ? h("button", { type: "button", onClick: function(){ removeTrialPreference(idx); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "18px", flex: "0 0 auto", padding: "0 4px 10px" } }, "×") : null
-              )
+        (function () {
+          function renderPrefRows(field, labelPrefix) {
+            var prefs = consultForm[field];
+            return h(Frag, null,
+              prefs.map(function (p, idx) {
+                return h("div", { className: "row2", key: idx, style: { alignItems: "flex-end" } },
+                  h("div", { className: "field" },
+                    h("label", null, (idx + 1) + "순위 " + labelPrefix + " 날짜"),
+                    h("input", { type: "text", placeholder: "예: 9월 15일 월요일", value: p.date, onChange: function(e){ updatePreference(field, idx, { date: e.target.value }); } })
+                  ),
+                  h("div", { className: "field", style: { display: "flex", gap: "8px", alignItems: "flex-end" } },
+                    h("div", { style: { flex: 1 } },
+                      h("label", null, (idx + 1) + "순위 " + labelPrefix + " 시간"),
+                      h("input", { type: "text", placeholder: "예: 오후 3시", value: p.time, onChange: function(e){ updatePreference(field, idx, { time: e.target.value }); } })
+                    ),
+                    idx > 0 ? h("button", { type: "button", onClick: function(){ removePreference(field, idx); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "18px", flex: "0 0 auto", padding: "0 4px 10px" } }, "×") : null
+                  )
+                );
+              }),
+              prefs.length < 3 ? h("div", { className: "field" },
+                h("button", { type: "button", className: "btn ghost", style: { width: "100%" }, onClick: function(){ addPreference(field); } }, "+ " + (prefs.length + 1) + "순위 추가")
+              ) : null
             );
-          }),
-          consultForm.trialPreferences.length < 3 ? h("div", { className: "field" },
-            h("button", { type: "button", className: "btn ghost", style: { width: "100%" }, onClick: addTrialPreference }, "+ " + (consultForm.trialPreferences.length + 1) + "순위 추가")
-          ) : null
-        ) : null,
+          }
+          if (consultForm.trialLesson === "신청") return renderPrefRows("trialPreferences", "체험레슨 희망");
+          if (consultForm.trialLesson === "미신청") return renderPrefRows("regularPreferences", "정규수업 희망");
+          return null;
+        })(),
 
 
         consultError ? h("div", { className: "error-banner" }, consultError) : null,
@@ -2457,9 +2477,11 @@ function App() {
         filteredConsults.map(function (rec) {
           var isExpanded = consultExpandedId === rec.id;
           var dateLabel = (rec.createdAt && rec.createdAt.toDate) ? rec.createdAt.toDate().toLocaleString("ko-KR") : "";
-          var trialText = rec.trialLesson === "신청"
-            ? (rec.trialPreferences || []).filter(function (p) { return p.date || p.time; }).map(function (p, idx) { return (idx + 1) + "순위 " + [p.date, p.time].filter(Boolean).join(" "); }).join(" / ")
-            : "미신청";
+          function formatPrefs(list) {
+            return (list || []).filter(function (p) { return p.date || p.time; }).map(function (p, idx) { return (idx + 1) + "순위 " + [p.date, p.time].filter(Boolean).join(" "); }).join(" / ");
+          }
+          var trialText = rec.trialLesson === "신청" ? formatPrefs(rec.trialPreferences) : "미신청";
+          var regularText = rec.trialLesson === "미신청" ? formatPrefs(rec.regularPreferences) : "";
           return h("div", { key: rec.id, style: { border: "1px solid var(--rule)", borderRadius: "12px", padding: "12px 14px", marginBottom: "10px", cursor: "pointer" }, onClick: function(){ setConsultExpandedId(isExpanded ? null : rec.id); } },
             h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" } },
               h("div", null,
@@ -2472,6 +2494,7 @@ function App() {
               summaryRow("본인 핸드폰", rec.studentPhone),
               rec.guardianPhone ? summaryRow("보호자 핸드폰", rec.guardianPhone) : null,
               summaryRow("체험레슨", trialText),
+              regularText ? summaryRow("정규수업 희망", regularText) : null,
               h("div", { className: "nav-row", style: { marginTop: "12px" } },
                 h("button", {
                   type: "button",
