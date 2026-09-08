@@ -1506,14 +1506,10 @@ function emptyConsultForm() {
   return {
     name: "",
     studentPhone: "",
-    instrument: "",
-    ageGroup: "",
-    guardianRelation: "",
     guardianPhone: "",
+    instrument: "",
     trialLesson: "",
     trialPreferences: [
-      { date: "", time: "" },
-      { date: "", time: "" },
       { date: "", time: "" }
     ]
   };
@@ -1621,21 +1617,33 @@ function App() {
     });
   }
 
+  function addTrialPreference() {
+    setConsultFormState_(function (f) {
+      if (f.trialPreferences.length >= 3) return f;
+      return Object.assign({}, f, { trialPreferences: f.trialPreferences.concat([{ date: "", time: "" }]) });
+    });
+  }
+
+  function removeTrialPreference(idx) {
+    setConsultFormState_(function (f) {
+      if (f.trialPreferences.length <= 1) return f;
+      var prefs = f.trialPreferences.slice();
+      prefs.splice(idx, 1);
+      return Object.assign({}, f, { trialPreferences: prefs });
+    });
+  }
+
   function validateConsult() {
     if (!consultForm.name.trim()) return "이름을 입력해 주세요.";
     if (consultForm.studentPhone.replace(/\D/g, "").length < 9) return "본인 핸드폰 번호를 확인해 주세요.";
     if (!consultForm.instrument) return "악기를 선택해 주세요.";
-    if (!consultForm.ageGroup) return "미성년자/성인 여부를 선택해 주세요.";
-    if (consultForm.ageGroup === "미성년자") {
-      if (!consultForm.guardianRelation) return "보호자(아버지/어머니)를 선택해 주세요.";
-      if (consultForm.guardianPhone.replace(/\D/g, "").length < 9) return "보호자 핸드폰 번호를 확인해 주세요.";
-    }
     if (!consultForm.trialLesson) return "체험레슨 신청 여부를 선택해 주세요.";
     if (consultForm.trialLesson === "신청") {
-      if (!consultForm.trialPreferences[0].date || !consultForm.trialPreferences[0].time) return "체험레슨 희망 날짜/시간 1순위를 선택해 주세요.";
+      if (!consultForm.trialPreferences[0].date.trim() || !consultForm.trialPreferences[0].time.trim()) return "체험레슨 희망 날짜/시간 1순위를 입력해 주세요.";
     }
     return "";
   }
+
 
   function fetchConsultations() {
     if (!db) return;
@@ -2374,9 +2382,15 @@ function App() {
           h("input", { type: "text", placeholder: "상담자 이름", value: consultForm.name, onChange: function(e){ setConsult("name", e.target.value); } })
         ),
 
-        h("div", { className: "field" },
-          h("label", null, "본인 핸드폰 번호"),
-          h("input", { type: "tel", placeholder: "010-0000-0000", value: consultForm.studentPhone, onChange: function(e){ setConsult("studentPhone", formatPhone(e.target.value)); } })
+        h("div", { className: "row2" },
+          h("div", { className: "field" },
+            h("label", null, "본인 핸드폰 번호"),
+            h("input", { type: "tel", placeholder: "010-0000-0000", value: consultForm.studentPhone, onChange: function(e){ setConsult("studentPhone", formatPhone(e.target.value)); } })
+          ),
+          h("div", { className: "field" },
+            h("label", null, "보호자 핸드폰 번호"),
+            h("input", { type: "tel", placeholder: "010-0000-0000", value: consultForm.guardianPhone, onChange: function(e){ setConsult("guardianPhone", formatPhone(e.target.value)); } })
+          )
         ),
 
         h("div", { className: "field" },
@@ -2389,30 +2403,6 @@ function App() {
         ),
 
         h("div", { className: "field" },
-          h("label", null, "미성년자 / 성인"),
-          h("div", { className: "block-group" },
-            ["미성년자", "성인"].map(function (a) {
-              return h(Pill, { key: a, wide: true, selected: consultForm.ageGroup===a, onClick: function(){ setConsult("ageGroup", a); } }, a);
-            })
-          )
-        ),
-
-        consultForm.ageGroup === "미성년자" ? h(Frag, null,
-          h("div", { className: "field" },
-            h("label", null, "보호자"),
-            h("div", { className: "pill-group" },
-              ["아버지", "어머니"].map(function (r) {
-                return h(Pill, { key: r, selected: consultForm.guardianRelation===r, onClick: function(){ setConsult("guardianRelation", r); } }, r);
-              })
-            )
-          ),
-          h("div", { className: "field" },
-            h("label", null, "보호자 핸드폰 번호"),
-            h("input", { type: "tel", placeholder: "010-0000-0000", value: consultForm.guardianPhone, onChange: function(e){ setConsult("guardianPhone", formatPhone(e.target.value)); } })
-          )
-        ) : null,
-
-        h("div", { className: "field" },
           h("label", null, "체험레슨 신청 여부"),
           h("div", { className: "block-group" },
             ["신청", "미신청"].map(function (t) {
@@ -2423,23 +2413,25 @@ function App() {
 
         consultForm.trialLesson === "신청" ? h(Frag, null,
           consultForm.trialPreferences.map(function (p, idx) {
-            return h("div", { className: "row2", key: idx },
+            return h("div", { className: "row2", key: idx, style: { alignItems: "flex-end" } },
               h("div", { className: "field" },
-                h("label", null, (idx + 1) + "순위 희망 날짜" + (idx === 0 ? "" : " (선택)")),
-                h("input", { type: "date", value: p.date, onChange: function(e){ updateTrialPreference(idx, { date: e.target.value }); } })
+                h("label", null, (idx + 1) + "순위 희망 날짜"),
+                h("input", { type: "text", placeholder: "예: 9월 15일 월요일", value: p.date, onChange: function(e){ updateTrialPreference(idx, { date: e.target.value }); } })
               ),
-              h("div", { className: "field" },
-                h("label", null, (idx + 1) + "순위 희망 시간" + (idx === 0 ? "" : " (선택)")),
-                h("select", { value: p.time, onChange: function(e){ updateTrialPreference(idx, { time: e.target.value }); } },
-                  h("option", { value: "" }, "선택"),
-                  FIRST_LESSON_TIME_OPTIONS.map(function (t) {
-                    return h("option", { key: t.value, value: t.value }, t.label);
-                  })
-                )
+              h("div", { className: "field", style: { display: "flex", gap: "8px", alignItems: "flex-end" } },
+                h("div", { style: { flex: 1 } },
+                  h("label", null, (idx + 1) + "순위 희망 시간"),
+                  h("input", { type: "text", placeholder: "예: 오후 3시", value: p.time, onChange: function(e){ updateTrialPreference(idx, { time: e.target.value }); } })
+                ),
+                idx > 0 ? h("button", { type: "button", onClick: function(){ removeTrialPreference(idx); }, style: { border: "none", background: "none", color: "var(--danger)", cursor: "pointer", fontSize: "18px", flex: "0 0 auto", padding: "0 4px 10px" } }, "×") : null
               )
             );
-          })
+          }),
+          consultForm.trialPreferences.length < 3 ? h("div", { className: "field" },
+            h("button", { type: "button", className: "btn ghost", style: { width: "100%" }, onClick: addTrialPreference }, "+ " + (consultForm.trialPreferences.length + 1) + "순위 추가")
+          ) : null
         ) : null,
+
 
         consultError ? h("div", { className: "error-banner" }, consultError) : null,
 
@@ -2466,19 +2458,19 @@ function App() {
           var isExpanded = consultExpandedId === rec.id;
           var dateLabel = (rec.createdAt && rec.createdAt.toDate) ? rec.createdAt.toDate().toLocaleString("ko-KR") : "";
           var trialText = rec.trialLesson === "신청"
-            ? (rec.trialPreferences || []).filter(function (p) { return p.date && p.time; }).map(function (p, idx) { return (idx + 1) + "순위 " + formatFirstLesson(p.date, p.time); }).join(" / ")
+            ? (rec.trialPreferences || []).filter(function (p) { return p.date || p.time; }).map(function (p, idx) { return (idx + 1) + "순위 " + [p.date, p.time].filter(Boolean).join(" "); }).join(" / ")
             : "미신청";
           return h("div", { key: rec.id, style: { border: "1px solid var(--rule)", borderRadius: "12px", padding: "12px 14px", marginBottom: "10px", cursor: "pointer" }, onClick: function(){ setConsultExpandedId(isExpanded ? null : rec.id); } },
             h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" } },
               h("div", null,
                 h("span", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, rec.name || "(이름 없음)"),
-                h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)", marginTop: "2px" } }, (rec.instrument || "-") + " · " + (rec.ageGroup || "-"))
+                h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)", marginTop: "2px" } }, rec.instrument || "-")
               ),
               h("div", { style: { textAlign: "right", flex: "0 0 auto", fontSize: "12px", color: "var(--ink-soft)" } }, dateLabel)
             ),
             isExpanded ? h("div", { style: { marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--rule)" } },
               summaryRow("본인 핸드폰", rec.studentPhone),
-              rec.ageGroup === "미성년자" ? summaryRow("보호자", (rec.guardianRelation || "-") + " · " + (rec.guardianPhone || "-")) : null,
+              rec.guardianPhone ? summaryRow("보호자 핸드폰", rec.guardianPhone) : null,
               summaryRow("체험레슨", trialText),
               h("div", { className: "nav-row", style: { marginTop: "12px" } },
                 h("button", {
