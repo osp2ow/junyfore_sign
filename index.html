@@ -483,6 +483,7 @@ var firebaseConfig = {
 };
 var FIREBASE_CONFIGURED = firebaseConfig.apiKey !== "YOUR_API_KEY";
 var COLLECTION_NAME = "enrollments"; // Firestore 컬렉션 이름
+var CONSULT_COLLECTION_NAME = "consultations"; // 상담자 목록 Firestore 컬렉션 이름
 // Firebase Auth는 이메일 형식만 지원해서, 관리자가 입력한 아이디 뒤에
 // 이 도메인을 붙여 내부적으로만 이메일처럼 사용합니다 (화면엔 아이디만 보여요).
 var ADMIN_ID_DOMAIN = "@junyfore-sign.local";
@@ -952,7 +953,7 @@ function cycleColumn(layout, key) {
 
 // ----- 상단 사진+문구 (보기/편집 동일한 위치·배치) -----
 var DEFAULT_HERO_LAYOUT = {
-  role: { x: 6, y: 36, size: 15 },
+  role: { x: 6, y: 36, size: 19 },
   name: { x: 6, y: 46, size: 33 },
   englishTitle: { x: 6, y: 60, size: 14 },
   quote: { x: 6, y: 72, size: 15 },
@@ -1501,6 +1502,23 @@ function emptyForm() {
   };
 }
 
+function emptyConsultForm() {
+  return {
+    name: "",
+    studentPhone: "",
+    instrument: "",
+    ageGroup: "",
+    guardianRelation: "",
+    guardianPhone: "",
+    trialLesson: "",
+    trialPreferences: [
+      { date: "", time: "" },
+      { date: "", time: "" },
+      { date: "", time: "" }
+    ]
+  };
+}
+
 function App() {
   var partState = useState(1); var part = partState[0], setPart = partState[1];
   var formState = useState(emptyForm()); var form = formState[0], setForm = formState[1];
@@ -1574,6 +1592,115 @@ function App() {
   var curriculumErrorState = useState(""); var curriculumError = curriculumErrorState[0], setCurriculumError = curriculumErrorState[1];
   var curriculumSavingState = useState(false); var curriculumSaving = curriculumSavingState[0], setCurriculumSaving = curriculumSavingState[1];
   var curriculumEditingState = useState(false); var curriculumEditing = curriculumEditingState[0], setCurriculumEditing = curriculumEditingState[1];
+
+  // ----- 상담자 목록 -----
+  var consultViewState = useState("list"); var consultView = consultViewState[0], setConsultView = consultViewState[1];
+  var consultFormState = useState(emptyConsultForm()); var consultForm = consultFormState[0], setConsultFormState_ = consultFormState[1];
+  var consultErrorState = useState(""); var consultError = consultErrorState[0], setConsultError = consultErrorState[1];
+  var consultSubmittingState = useState(false); var consultSubmitting = consultSubmittingState[0], setConsultSubmitting = consultSubmittingState[1];
+  var consultationsState = useState([]); var consultations = consultationsState[0], setConsultations = consultationsState[1];
+  var consultListLoadingState = useState(false); var consultListLoading = consultListLoadingState[0], setConsultListLoading = consultListLoadingState[1];
+  var consultListErrorState = useState(""); var consultListError = consultListErrorState[0], setConsultListError = consultListErrorState[1];
+  var consultSearchNameState = useState(""); var consultSearchName = consultSearchNameState[0], setConsultSearchName = consultSearchNameState[1];
+  var consultExpandedIdState = useState(null); var consultExpandedId = consultExpandedIdState[0], setConsultExpandedId = consultExpandedIdState[1];
+  var consultDeletingIdState = useState(null); var consultDeletingId = consultDeletingIdState[0], setConsultDeletingId = consultDeletingIdState[1];
+
+  function setConsult(key, value) {
+    setConsultFormState_(function (f) {
+      var next = Object.assign({}, f);
+      next[key] = value;
+      return next;
+    });
+  }
+
+  function updateTrialPreference(idx, patch) {
+    setConsultFormState_(function (f) {
+      var prefs = f.trialPreferences.slice();
+      prefs[idx] = Object.assign({}, prefs[idx], patch);
+      return Object.assign({}, f, { trialPreferences: prefs });
+    });
+  }
+
+  function validateConsult() {
+    if (!consultForm.name.trim()) return "이름을 입력해 주세요.";
+    if (consultForm.studentPhone.replace(/\D/g, "").length < 9) return "본인 핸드폰 번호를 확인해 주세요.";
+    if (!consultForm.instrument) return "악기를 선택해 주세요.";
+    if (!consultForm.ageGroup) return "미성년자/성인 여부를 선택해 주세요.";
+    if (consultForm.ageGroup === "미성년자") {
+      if (!consultForm.guardianRelation) return "보호자(아버지/어머니)를 선택해 주세요.";
+      if (consultForm.guardianPhone.replace(/\D/g, "").length < 9) return "보호자 핸드폰 번호를 확인해 주세요.";
+    }
+    if (!consultForm.trialLesson) return "체험레슨 신청 여부를 선택해 주세요.";
+    if (consultForm.trialLesson === "신청") {
+      if (!consultForm.trialPreferences[0].date || !consultForm.trialPreferences[0].time) return "체험레슨 희망 날짜/시간 1순위를 선택해 주세요.";
+    }
+    return "";
+  }
+
+  function fetchConsultations() {
+    if (!db) return;
+    setConsultListLoading(true);
+    setConsultListError("");
+    withTimeout(db.collection(CONSULT_COLLECTION_NAME).orderBy("createdAt", "desc").get(), 12000, "상담자 목록을 불러오는데 시간이 너무 오래 걸려요. 네트워크를 확인하고 다시 시도해 주세요.").then(function (snap) {
+      var list = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      setConsultations(list);
+    }).catch(function (e) {
+      console.error(e);
+      setConsultListError((e && e.message) ? e.message : "상담자 목록을 불러오지 못했습니다.");
+    }).finally(function () {
+      setConsultListLoading(false);
+    });
+  }
+
+  useEffect(function () {
+    if (mode !== "publicConsult" || !db) return;
+    fetchConsultations();
+  }, [mode]);
+
+  function submitConsult() {
+    var err = validateConsult();
+    if (err) { setConsultError(err); return; }
+    setConsultError("");
+    setConsultSubmitting(true);
+    var payload = Object.assign({}, consultForm, {
+      createdAt: FIREBASE_CONFIGURED ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
+    });
+    var afterOk = function (rec) {
+      setConsultSubmitting(false);
+      setConsultFormState_(emptyConsultForm());
+      setConsultView("list");
+      if (rec) setConsultations(function (list) { return [rec].concat(list); });
+    };
+    var afterErr = function (e) {
+      console.error(e);
+      setConsultSubmitting(false);
+      setConsultError("저장 중 오류가 발생했습니다: " + e.message);
+    };
+    if (FIREBASE_CONFIGURED) {
+      db.collection(CONSULT_COLLECTION_NAME).add(payload).then(function (ref) {
+        afterOk(Object.assign({ id: ref.id }, consultForm, { createdAt: new Date() }));
+      }).catch(afterErr);
+    } else {
+      console.log("Firebase 미설정 — 콘솔에만 출력합니다:", payload);
+      afterOk(null);
+    }
+  }
+
+  function deleteConsultation(rec) {
+    var confirmed = window.confirm((rec.name || "이 상담자") + " 님의 상담 내용을 정말 삭제할까요?");
+    if (!confirmed) return;
+    setConsultListError("");
+    setConsultDeletingId(rec.id);
+    db.collection(CONSULT_COLLECTION_NAME).doc(rec.id).delete().then(function () {
+      setConsultations(function (list) { return list.filter(function (c) { return c.id !== rec.id; }); });
+      if (consultExpandedId === rec.id) setConsultExpandedId(null);
+    }).catch(function (e) {
+      console.error(e);
+      setConsultListError("삭제 중 오류가 발생했습니다: " + e.message);
+    }).finally(function () {
+      setConsultDeletingId(null);
+    });
+  }
 
   useEffect(function () {
     if (!pdfRecord) return;
@@ -2227,6 +2354,158 @@ function App() {
           eventImage && eventImage.url
             ? h("img", { src: eventImage.url, style: { width: "100%", borderRadius: "18px", display: "block", boxShadow: "0 2px 6px rgba(184,148,95,0.06), 0 10px 24px rgba(35,35,35,0.06)" } })
             : h("div", { style: { padding: "50px 20px", textAlign: "center", color: TC.textMuted, fontSize: "13.5px", border: "1.5px dashed " + TC.border, borderRadius: "18px" } }, "아직 이벤트 안내 이미지가 없어요.")
+        )
+      )
+    );
+  }
+
+  if (mode === "publicConsult") {
+    var filteredConsults = consultations.filter(function (c) {
+      if (!consultSearchName) return true;
+      return (c.name && c.name.indexOf(consultSearchName) !== -1);
+    });
+
+    function renderConsultAddForm() {
+      return h(Frag, null,
+        h("div", { className: "section-title" }, "상담자 등록"),
+
+        h("div", { className: "field" },
+          h("label", null, "이름"),
+          h("input", { type: "text", placeholder: "상담자 이름", value: consultForm.name, onChange: function(e){ setConsult("name", e.target.value); } })
+        ),
+
+        h("div", { className: "field" },
+          h("label", null, "본인 핸드폰 번호"),
+          h("input", { type: "tel", placeholder: "010-0000-0000", value: consultForm.studentPhone, onChange: function(e){ setConsult("studentPhone", formatPhone(e.target.value)); } })
+        ),
+
+        h("div", { className: "field" },
+          h("label", null, "악기 선택"),
+          h("div", { className: "pill-group" },
+            ["보컬", "기타", "베이스", "드럼", "피아노", "작곡(미디)"].map(function (i) {
+              return h(Pill, { key: i, selected: consultForm.instrument===i, onClick: function(){ setConsult("instrument", i); } }, i);
+            })
+          )
+        ),
+
+        h("div", { className: "field" },
+          h("label", null, "미성년자 / 성인"),
+          h("div", { className: "block-group" },
+            ["미성년자", "성인"].map(function (a) {
+              return h(Pill, { key: a, wide: true, selected: consultForm.ageGroup===a, onClick: function(){ setConsult("ageGroup", a); } }, a);
+            })
+          )
+        ),
+
+        consultForm.ageGroup === "미성년자" ? h(Frag, null,
+          h("div", { className: "field" },
+            h("label", null, "보호자"),
+            h("div", { className: "pill-group" },
+              ["아버지", "어머니"].map(function (r) {
+                return h(Pill, { key: r, selected: consultForm.guardianRelation===r, onClick: function(){ setConsult("guardianRelation", r); } }, r);
+              })
+            )
+          ),
+          h("div", { className: "field" },
+            h("label", null, "보호자 핸드폰 번호"),
+            h("input", { type: "tel", placeholder: "010-0000-0000", value: consultForm.guardianPhone, onChange: function(e){ setConsult("guardianPhone", formatPhone(e.target.value)); } })
+          )
+        ) : null,
+
+        h("div", { className: "field" },
+          h("label", null, "체험레슨 신청 여부"),
+          h("div", { className: "block-group" },
+            ["신청", "미신청"].map(function (t) {
+              return h(Pill, { key: t, wide: true, selected: consultForm.trialLesson===t, onClick: function(){ setConsult("trialLesson", t); } }, t);
+            })
+          )
+        ),
+
+        consultForm.trialLesson === "신청" ? h(Frag, null,
+          consultForm.trialPreferences.map(function (p, idx) {
+            return h("div", { className: "row2", key: idx },
+              h("div", { className: "field" },
+                h("label", null, (idx + 1) + "순위 희망 날짜" + (idx === 0 ? "" : " (선택)")),
+                h("input", { type: "date", value: p.date, onChange: function(e){ updateTrialPreference(idx, { date: e.target.value }); } })
+              ),
+              h("div", { className: "field" },
+                h("label", null, (idx + 1) + "순위 희망 시간" + (idx === 0 ? "" : " (선택)")),
+                h("select", { value: p.time, onChange: function(e){ updateTrialPreference(idx, { time: e.target.value }); } },
+                  h("option", { value: "" }, "선택"),
+                  FIRST_LESSON_TIME_OPTIONS.map(function (t) {
+                    return h("option", { key: t.value, value: t.value }, t.label);
+                  })
+                )
+              )
+            );
+          })
+        ) : null,
+
+        consultError ? h("div", { className: "error-banner" }, consultError) : null,
+
+        h("div", { className: "nav-row" },
+          h("button", { type: "button", className: "btn ghost", onClick: function(){ setConsultError(""); setConsultFormState_(emptyConsultForm()); setConsultView("list"); } }, "취소"),
+          h("button", { type: "button", className: "btn brass", disabled: consultSubmitting, onClick: submitConsult }, consultSubmitting ? "저장 중…" : "상담자 저장")
+        )
+      );
+    }
+
+    function renderConsultList() {
+      return h(Frag, null,
+        h("div", { className: "row2", style: { marginBottom: "14px" } },
+          h("input", { type: "text", placeholder: "이름으로 검색", value: consultSearchName, onChange: function(e){ setConsultSearchName(e.target.value); } })
+        ),
+        h("div", { className: "nav-row", style: { marginBottom: "6px" } },
+          h("button", { type: "button", className: "btn primary", style: { width: "100%" }, onClick: function(){ setConsultError(""); setConsultFormState_(emptyConsultForm()); setConsultView("add"); } }, "+ 새 상담자 등록")
+        ),
+        consultListError ? h("div", { className: "error-banner", style: { marginTop: "10px" } }, consultListError, h("button", { type: "button", className: "link-btn", style: { marginLeft: "10px" }, onClick: fetchConsultations }, "다시 시도")) : null,
+        consultListLoading ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "불러오는 중…") : null,
+        (!consultListLoading && filteredConsults.length === 0) ? h("div", { style: { padding: "20px", textAlign: "center", color: "var(--ink-soft)" } }, "등록된 상담자가 없습니다.") : null,
+        !consultListLoading && filteredConsults.length > 0 ? h("div", { style: { fontSize: "12px", color: "var(--ink-soft)", margin: "10px 0 8px" } }, "총 " + filteredConsults.length + "건") : null,
+        filteredConsults.map(function (rec) {
+          var isExpanded = consultExpandedId === rec.id;
+          var dateLabel = (rec.createdAt && rec.createdAt.toDate) ? rec.createdAt.toDate().toLocaleString("ko-KR") : "";
+          var trialText = rec.trialLesson === "신청"
+            ? (rec.trialPreferences || []).filter(function (p) { return p.date && p.time; }).map(function (p, idx) { return (idx + 1) + "순위 " + formatFirstLesson(p.date, p.time); }).join(" / ")
+            : "미신청";
+          return h("div", { key: rec.id, style: { border: "1px solid var(--rule)", borderRadius: "12px", padding: "12px 14px", marginBottom: "10px", cursor: "pointer" }, onClick: function(){ setConsultExpandedId(isExpanded ? null : rec.id); } },
+            h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" } },
+              h("div", null,
+                h("span", { style: { fontWeight: 700, color: "var(--juniper-deep)" } }, rec.name || "(이름 없음)"),
+                h("div", { style: { fontSize: "12.5px", color: "var(--ink-soft)", marginTop: "2px" } }, (rec.instrument || "-") + " · " + (rec.ageGroup || "-"))
+              ),
+              h("div", { style: { textAlign: "right", flex: "0 0 auto", fontSize: "12px", color: "var(--ink-soft)" } }, dateLabel)
+            ),
+            isExpanded ? h("div", { style: { marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--rule)" } },
+              summaryRow("본인 핸드폰", rec.studentPhone),
+              rec.ageGroup === "미성년자" ? summaryRow("보호자", (rec.guardianRelation || "-") + " · " + (rec.guardianPhone || "-")) : null,
+              summaryRow("체험레슨", trialText),
+              h("div", { className: "nav-row", style: { marginTop: "12px" } },
+                h("button", {
+                  type: "button",
+                  className: "btn ghost",
+                  style: { flex: 1, color: "var(--danger)", borderColor: "#EBC6BC" },
+                  disabled: consultDeletingId === rec.id,
+                  onClick: function (e) { e.stopPropagation(); deleteConsultation(rec); }
+                }, consultDeletingId === rec.id ? "삭제 중…" : "삭제")
+              )
+            ) : null
+          );
+        })
+      );
+    }
+
+    return h(Frag, null,
+      h("div", { className: "shell" },
+        h("div", { className: "header" },
+          h("div", { className: "brand" }, "주니퍼 실용음악학원"),
+          h("div", { className: "doc-title" }, "상 담 자 목 록")
+        ),
+        h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
+          h(BackButton, { onClick: function(){ setConsultView("list"); setConsultError(""); setMode("form"); } }, "← 등록 원서로")
+        ),
+        h("div", { className: "card" },
+          consultView === "add" ? renderConsultAddForm() : renderConsultList()
         )
       )
     );
@@ -3037,7 +3316,8 @@ function App() {
       ),
       h("div", { style: { display: "flex", gap: "10px", justifyContent: "center", marginBottom: "18px" } },
         h("button", { type: "button", className: "btn info-nav", style: { flex: "0 0 auto", padding: "12px 20px" }, onClick: function(){ setMode("publicTeachers"); } }, "선생님 소개"),
-        h("button", { type: "button", className: "btn info-nav", style: { flex: "0 0 auto", padding: "12px 20px" }, onClick: function(){ setMode("publicPricing"); } }, "학원비 안내")
+        h("button", { type: "button", className: "btn info-nav", style: { flex: "0 0 auto", padding: "12px 20px" }, onClick: function(){ setMode("publicPricing"); } }, "학원비 안내"),
+        h("button", { type: "button", className: "btn info-nav", style: { flex: "0 0 auto", padding: "12px 20px" }, onClick: function(){ setConsultView("list"); setMode("publicConsult"); } }, "상담자 목록")
       ),
       h("div", { className: "staff" }),
       h(ProgressBar, { part: part }),
