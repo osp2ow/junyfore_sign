@@ -1752,21 +1752,13 @@ function App() {
   }
 
   function handleDeleteRecord(rec) {
-    var confirmed = window.confirm((rec.name || "이 학생") + " 학생의 등록 원서를 정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.");
+    var confirmed = window.confirm((rec.name || "이 학생") + " 학생의 등록 원서를 정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.\n(카카오톡/문자로 이미 보낸 등록원서 링크는 계속 열람 가능하도록 남겨둡니다.)");
     if (!confirmed) return;
     setListError("");
     setDeletingId(rec.id);
     db.collection(COLLECTION_NAME).doc(rec.id).delete().then(function () {
-      if (rec.pdfPath && storage) {
-        storage.ref(rec.pdfPath).delete().catch(function (e) {
-          console.error("PDF 파일 삭제 실패(등록 데이터는 삭제됨):", e);
-        });
-      }
-      if (rec.shortCode) {
-        db.collection("links").doc(rec.shortCode).delete().catch(function (e) {
-          console.error("단축 링크 삭제 실패(등록 데이터는 삭제됨):", e);
-        });
-      }
+      // 등록 데이터만 지우고, 이미 카카오톡/문자로 전달된 PDF와 단축 링크(links/{shortCode})는
+      // 일부러 삭제하지 않습니다 — 나중에 그 링크를 다시 열어도 항상 열리도록 하기 위함입니다.
       setEnrollments(function (list) { return list.filter(function (e) { return e.id !== rec.id; }); });
       if (expandedId === rec.id) setExpandedId(null);
     }).catch(function (e) {
