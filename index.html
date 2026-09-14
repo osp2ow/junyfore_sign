@@ -2374,7 +2374,12 @@ function App() {
   if (mode === "publicConsult") {
     var filteredConsults = consultations.filter(function (c) {
       if (!consultSearchName) return true;
-      return (c.name && c.name.indexOf(consultSearchName) !== -1);
+      var nameHit = c.name && c.name.indexOf(consultSearchName) !== -1;
+      var digitsQuery = consultSearchName.replace(/\D/g, "");
+      var phoneHit = digitsQuery && [c.studentPhone, c.guardianPhone].some(function (p) {
+        return p && p.replace(/\D/g, "").indexOf(digitsQuery) !== -1;
+      });
+      return nameHit || phoneHit;
     });
 
     function renderConsultAddForm() {
@@ -2457,7 +2462,7 @@ function App() {
     function renderConsultList() {
       return h(Frag, null,
         h("div", { className: "row2", style: { marginBottom: "14px" } },
-          h("input", { type: "text", placeholder: "이름으로 검색", value: consultSearchName, onChange: function(e){ setConsultSearchName(e.target.value); } })
+          h("input", { type: "text", placeholder: "이름 또는 핸드폰 번호로 검색", value: consultSearchName, onChange: function(e){ setConsultSearchName(e.target.value); } })
         ),
         h("div", { className: "nav-row", style: { marginBottom: "6px" } },
           h("button", { type: "button", className: "btn primary", style: { width: "100%" }, onClick: function(){ setConsultError(""); setConsultFormState_(emptyConsultForm()); setConsultView("add"); } }, "+ 새 상담자 등록")
@@ -2548,9 +2553,14 @@ function App() {
   if (mode === "adminList") {
     var filteredEnrollments = enrollments.filter(function (e) {
       if (!searchName) return true;
-      return (e.name && e.name.indexOf(searchName) !== -1) ||
+      var nameHit = (e.name && e.name.indexOf(searchName) !== -1) ||
         (e.fatherName && e.fatherName.indexOf(searchName) !== -1) ||
         (e.motherName && e.motherName.indexOf(searchName) !== -1);
+      var digitsQuery = searchName.replace(/\D/g, "");
+      var phoneHit = digitsQuery && [e.studentPhone, e.fatherPhone, e.motherPhone].some(function (p) {
+        return p && p.replace(/\D/g, "").indexOf(digitsQuery) !== -1;
+      });
+      return nameHit || phoneHit;
     });
     var sortedEnrollments = filteredEnrollments.slice().sort(function (a, b) {
       if (sortMode === "name") return (a.name || "").localeCompare(b.name || "", "ko");
@@ -2615,7 +2625,7 @@ function App() {
       ) : null,
       adminTab === "list" ? h("div", { className: "card" },
         h("div", { className: "row2", style: { marginBottom: "14px" } },
-          h("input", { type: "text", placeholder: "이름 또는 보호자 성함으로 검색", value: searchName, onChange: function(e){ setSearchName(e.target.value); } })
+          h("input", { type: "text", placeholder: "이름, 보호자 성함 또는 핸드폰 번호로 검색", value: searchName, onChange: function(e){ setSearchName(e.target.value); } })
         ),
         h("div", { className: "pill-group", style: { marginBottom: "14px" } },
           h(Pill, { selected: sortMode==="date", onClick: function(){ setSortMode("date"); } }, "최신순"),
