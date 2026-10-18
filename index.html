@@ -459,10 +459,10 @@
     padding: clamp(20px, 3.4vmin, 40px) clamp(22px, 4vmin, 52px) 0;
   }
   .lobby-brand{
-    display:flex; align-items:center; gap:12px;
+    display:flex; align-items:center; gap:12px; cursor:pointer;
     font-size: clamp(14px, 2vmin, 19px); font-weight:600; letter-spacing:0.02em;
     color: rgba(246,243,234,0.78);
-    padding:8px 10px 8px 0; cursor:default; touch-action:none;
+    padding:8px 10px 8px 0;
   }
   .lobby-brand .mark{
     position:relative; width:38px; height:38px; border-radius:50%;
@@ -547,6 +547,23 @@
   }
   .lobby-ghost:active{ background: rgba(246,243,234,0.08); }
   .lobby-count{ margin-top: clamp(22px, 4vmin, 38px); font-size: clamp(13px, 1.9vmin, 17px); color: rgba(246,243,234,0.5); font-variant-numeric: tabular-nums; }
+
+  .lobby-modal-bg{
+    position:fixed; inset:0; z-index:60; display:grid; place-items:center;
+    background: rgba(8,18,12,0.62); animation: lobbyFade 0.2s ease both; padding:24px;
+  }
+  .lobby-modal{
+    width:min(420px, 100%); background:#F6F3EA; color:#1F3B2D; border-radius:20px;
+    padding: 30px 26px 22px; text-align:center; box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  }
+  .lobby-modal-title{ font-size:21px; font-weight:800; letter-spacing:-0.01em; }
+  .lobby-modal-desc{ margin-top:8px; font-size:15px; color:#5b5b52; word-break:keep-all; }
+  .lobby-modal-btns{ display:flex; gap:10px; margin-top:24px; }
+  .lobby-modal-btns button{
+    flex:1; padding:15px 0; border-radius:12px; font-size:16px; font-weight:700; font-family:inherit; cursor:pointer; border:none;
+  }
+  .lobby-modal-btns .cancel{ background:#fff; color:#5b5b52; border:1.5px solid #D8D2C0; }
+  .lobby-modal-btns .ok{ background:#1F3B2D; color:#fff; }
 
   .lobby-foot{
     padding: 0 24px clamp(20px, 3.4vmin, 36px); text-align:center;
@@ -1634,11 +1651,11 @@ function emptyConsultForm() {
    로비 호출 화면 (#lobby)
    - 손님이 "호출하기"를 누르면 Cloud Function(lobbyCall)이 요일별 담당 번호로 문자를 보냅니다.
      (번호·요일 설정은 서버 코드 functions/lobbyCall.js 에 있어요 — 웹페이지에는 노출되지 않습니다.)
-   - 왼쪽 위 학원 로고를 2초간 꾹 누르면 등록 원서 화면으로 돌아갑니다.
+   - 왼쪽 위 학원 이름을 누르면 "나가시겠습니까?" 확인창이 뜹니다.
 ========================================================================= */
 var LOBBY_CALL_URL = "https://asia-northeast3-junyfore-sign.cloudfunctions.net/lobbyCall";
 var LOBBY_RESET_SEC = 60;   // 호출 완료 화면이 유지되는 시간(초) — 이 시간 동안은 다시 누를 수 없어요.
-var LOBBY_EXIT_HOLD_MS = 2000;
+var LOBBY_ERROR_RESET_SEC = 15; // 호출 실패 화면이 유지되는 시간(초)
 
 function lobbyRequestFullscreen() {
   var el = document.documentElement;
@@ -1671,9 +1688,7 @@ function LobbyCall(props) {
   var statusState = useState("idle"); var status = statusState[0], setStatus = statusState[1]; // idle | calling | done | error
   var countState = useState(0); var count = countState[0], setCount = countState[1];
   var nowState = useState(new Date()); var now = nowState[0], setNow = nowState[1];
-  var holdState = useState(0); var hold = holdState[0], setHold = holdState[1];
-  var holdTimerRef = useRef(null);
-  var holdStartRef = useRef(0);
+  var exitAskState = useState(false); var exitAsk = exitAskState[0], setExitAsk = exitAskState[1];
   var wakeRef = useRef(null);
 
   // 시계
@@ -1728,32 +1743,22 @@ function LobbyCall(props) {
       .finally(function () { clearTimeout(timeout); });
   }
 
-  // 로고 2초 꾹 누르기 → 나가기
-  function startHold(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    cancelHold();
-    holdStartRef.current = Date.now();
-    holdTimerRef.current = setInterval(function () {
-      var p = Math.min(1, (Date.now() - holdStartRef.current) / LOBBY_EXIT_HOLD_MS);
-      setHold(p);
-      if (p >= 1) {
-        cancelHold();
-        lobbyExitFullscreen();
-        props.onExit();
-      }
-    }, 40);
+  function confirmExit() {
+    setExitAsk(false);
+    lobbyExitFullscreen();
+    props.onExit();
   }
-  function cancelHold() {
-    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-    holdTimerRef.current = null;
-    setHold(0);
-  }
-  useEffect(function () { return cancelHold; }, []);
+
+  // 호출 실패 화면 → 잠시 후 자동으로 처음 화면
+  useEffect(function () {
+    if (status !== "error") return;
+    var t = setTimeout(function () { setStatus("idle"); }, LOBBY_ERROR_RESET_SEC * 1000);
+    return function () { clearTimeout(t); };
+  }, [status]);
 
   var hh = now.getHours(), mm = now.getMinutes();
   var timeText = (hh < 12 ? "오전 " : "오후 ") + ((hh % 12) || 12) + ":" + (mm < 10 ? "0" : "") + mm;
   var dateText = (now.getMonth() + 1) + "월 " + now.getDate() + "일 " + LOBBY_DAYS[now.getDay()];
-  var ringLen = 2 * Math.PI * 21;
 
   var main;
   if (status === "done") {
@@ -1795,13 +1800,9 @@ function LobbyCall(props) {
     h("div", { className: "lobby-top" },
       h("div", {
         className: "lobby-brand",
-        onPointerDown: startHold, onPointerUp: cancelHold, onPointerLeave: cancelHold, onPointerCancel: cancelHold,
-        onContextMenu: function (e) { e.preventDefault(); }
+        onClick: function () { setExitAsk(true); }
       },
         h("div", { className: "mark" },
-          hold > 0 ? h("svg", { viewBox: "0 0 46 46" },
-            h("circle", { cx: 23, cy: 23, r: 21, fill: "none", stroke: "#D4B868", strokeWidth: 2.5, strokeDasharray: ringLen, strokeDashoffset: ringLen * (1 - hold), strokeLinecap: "round" })
-          ) : null,
           "J"
         ),
         h("span", null, "주니퍼 실용음악학원")
@@ -1812,7 +1813,17 @@ function LobbyCall(props) {
       )
     ),
     h("div", { className: "lobby-main" }, main),
-    h("div", { className: "lobby-foot" }, "수업 중에는 조금 늦게 나올 수 있어요. 양해 부탁드려요.")
+    h("div", { className: "lobby-foot" }, "수업 중에는 조금 늦게 나올 수 있어요. 양해 부탁드려요."),
+    exitAsk ? h("div", { className: "lobby-modal-bg", onClick: function () { setExitAsk(false); } },
+      h("div", { className: "lobby-modal", onClick: function (e) { e.stopPropagation(); } },
+        h("div", { className: "lobby-modal-title" }, "이 페이지를 나가시겠습니까?"),
+        h("div", { className: "lobby-modal-desc" }, "로비 호출 화면을 닫고 등록 원서로 돌아가요."),
+        h("div", { className: "lobby-modal-btns" },
+          h("button", { type: "button", className: "cancel", onClick: function () { setExitAsk(false); } }, "취소"),
+          h("button", { type: "button", className: "ok", onClick: confirmExit }, "나가기")
+        )
+      )
+    ) : null
   );
 }
 
