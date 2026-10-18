@@ -542,8 +542,17 @@
   .lobby-fade{ animation: lobbyFade 0.35s ease both; display:flex; flex-direction:column; align-items:center; }
   @keyframes lobbyFade{ from{ opacity:0; transform: translateY(8px); } to{ opacity:1; transform:none; } }
 
-  .lobby-ghost{
+  .lobby-actions{
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
     margin-top: clamp(26px, 4.5vmin, 44px);
+  }
+  .lobby-solid{
+    padding: 16px 34px; border-radius:999px; cursor:pointer; border:none;
+    background: var(--lb-btn-2); color: var(--lb-btn-ink);
+    font-size: clamp(16px, 2.3vmin, 21px); font-weight:700; font-family:inherit;
+  }
+  .lobby-solid:active{ transform: scale(0.97); }
+  .lobby-ghost{
     padding: 16px 34px; border-radius:999px; cursor:pointer;
     background: transparent; color:var(--lb-ink); border: 1.5px solid var(--lb-line);
     font-size: clamp(16px, 2.3vmin, 21px); font-weight:700; font-family:inherit;
@@ -1806,9 +1815,9 @@ function LobbyCall(props) {
     return function () { document.removeEventListener("pointerdown", onFirstTouch); };
   }, []);
 
-  // 호출 완료 후 카운트다운 → 처음 화면
+  // 호출 완료/실패 후 카운트다운 → 처음 화면
   useEffect(function () {
-    if (status !== "done") return;
+    if (status !== "done" && status !== "error") return;
     if (count <= 0) { setStatus("idle"); return; }
     var t = setTimeout(function () { setCount(count - 1); }, 1000);
     return function () { clearTimeout(t); };
@@ -1827,7 +1836,7 @@ function LobbyCall(props) {
         });
       })
       .then(function () { setCount(LOBBY_RESET_SEC); setStatus("done"); })
-      .catch(function (e) { console.error("로비 호출 실패:", e); setStatus("error"); })
+      .catch(function (e) { console.error("로비 호출 실패:", e); setCount(LOBBY_ERROR_RESET_SEC); setStatus("error"); })
       .finally(function () { clearTimeout(timeout); });
   }
 
@@ -1837,12 +1846,10 @@ function LobbyCall(props) {
     props.onExit();
   }
 
-  // 호출 실패 화면 → 잠시 후 자동으로 처음 화면
-  useEffect(function () {
-    if (status !== "error") return;
-    var t = setTimeout(function () { setStatus("idle"); }, LOBBY_ERROR_RESET_SEC * 1000);
-    return function () { clearTimeout(t); };
-  }, [status]);
+  function goHome() {
+    setCount(0);
+    setStatus("idle");
+  }
 
   var hh = now.getHours(), mm = now.getMinutes();
   var timeText = (hh < 12 ? "오전 " : "오후 ") + ((hh % 12) || 12) + ":" + (mm < 10 ? "0" : "") + mm;
@@ -1858,7 +1865,10 @@ function LobbyCall(props) {
       ),
       h("h1", { className: "lobby-title" }, "원장님께 알림을 보냈어요"),
       h("p", { className: "lobby-sub" }, "곧 나올게요. 잠시만 기다려 주세요."),
-      h("div", { className: "lobby-count" }, count + "초 후 처음 화면으로 돌아가요")
+      h("div", { className: "lobby-actions" },
+        h("button", { type: "button", className: "lobby-ghost", onClick: goHome }, "처음 화면으로")
+      ),
+      h("div", { className: "lobby-count" }, count + "초 후 자동으로 처음 화면으로 돌아가요")
     );
   } else if (status === "error") {
     main = h("div", { className: "lobby-fade", key: "error" },
@@ -1869,7 +1879,11 @@ function LobbyCall(props) {
       ),
       h("h1", { className: "lobby-title" }, "호출을 보내지 못했어요"),
       h("p", { className: "lobby-sub" }, "잠시 후 한 번만 더 눌러주세요."),
-      h("button", { type: "button", className: "lobby-ghost", onClick: call }, "다시 호출하기")
+      h("div", { className: "lobby-actions" },
+        h("button", { type: "button", className: "lobby-ghost", onClick: goHome }, "처음 화면으로"),
+        h("button", { type: "button", className: "lobby-solid", onClick: call }, "다시 호출하기")
+      ),
+      h("div", { className: "lobby-count" }, count + "초 후 자동으로 처음 화면으로 돌아가요")
     );
   } else {
     var busy = status === "calling";
