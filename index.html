@@ -1768,7 +1768,7 @@ function LobbyCall(props) {
           h("path", { d: "M5 12.5l4.5 4.5L19 7.5" })
         )
       ),
-      h("h1", { className: "lobby-title" }, "선생님께 알림을 보냈어요"),
+      h("h1", { className: "lobby-title" }, "원장님께 알림을 보냈어요"),
       h("p", { className: "lobby-sub" }, "곧 나올게요. 잠시만 기다려 주세요."),
       h("div", { className: "lobby-count" }, count + "초 후 처음 화면으로 돌아가요")
     );
@@ -1788,8 +1788,8 @@ function LobbyCall(props) {
     main = h("div", { className: "lobby-fade", key: "idle" },
       h("div", { className: "lobby-eyebrow" }, "WELCOME"),
       h("h1", { className: "lobby-title" }, "카운터가 비어 있나요?"),
-      h("p", { className: "lobby-sub" }, "아래 버튼을 눌러주시면 선생님께 바로 알림이 가요."),
-      h("button", { type: "button", className: "lobby-call" + (busy ? " busy" : ""), onClick: call, disabled: busy, "aria-label": "선생님 호출하기" },
+      h("p", { className: "lobby-sub" }, "아래 버튼을 눌러주시면 원장님께 바로 알림이 가요."),
+      h("button", { type: "button", className: "lobby-call" + (busy ? " busy" : ""), onClick: call, disabled: busy, "aria-label": "원장님 호출하기" },
         busy ? h("div", { className: "lobby-spinner" }) : h(LobbyBell),
         h("span", { className: "label" }, busy ? "호출 중" : "호출하기")
       )
