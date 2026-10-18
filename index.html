@@ -457,6 +457,9 @@
   .lobby-top{
     display:flex; justify-content:space-between; align-items:flex-start;
     padding: clamp(20px, 3.4vmin, 40px) clamp(22px, 4vmin, 52px) 0;
+    padding-top: calc(clamp(20px, 3.4vmin, 40px) + env(safe-area-inset-top, 0px));
+    padding-left: calc(clamp(22px, 4vmin, 52px) + env(safe-area-inset-left, 0px));
+    padding-right: calc(clamp(22px, 4vmin, 52px) + env(safe-area-inset-right, 0px));
   }
   .lobby-brand{
     display:flex; align-items:center; gap:12px; cursor:pointer;
@@ -567,6 +570,7 @@
 
   .lobby-foot{
     padding: 0 24px clamp(20px, 3.4vmin, 36px); text-align:center;
+    padding-bottom: calc(clamp(20px, 3.4vmin, 36px) + env(safe-area-inset-bottom, 0px));
     font-size: clamp(12px, 1.7vmin, 16px); color: rgba(246,243,234,0.45); word-break:keep-all;
   }
 </style>
@@ -1690,6 +1694,31 @@ function LobbyCall(props) {
   var nowState = useState(new Date()); var now = nowState[0], setNow = nowState[1];
   var exitAskState = useState(false); var exitAsk = exitAskState[0], setExitAsk = exitAskState[1];
   var wakeRef = useRef(null);
+
+  // 로비 화면에서는 페이지 바깥 여백(상태바·홈바 영역)까지 같은 초록색으로 칠합니다.
+  useEffect(function () {
+    var LOBBY_BG = "#17301F";
+    var html = document.documentElement, body = document.body;
+    var prevHtmlBg = html.style.background, prevBodyBg = body.style.background, prevBodyImg = body.style.backgroundImage;
+    html.style.background = LOBBY_BG;
+    body.style.background = LOBBY_BG;
+    body.style.backgroundImage = "none";
+    var vp = document.querySelector('meta[name="viewport"]');
+    var prevVp = vp ? vp.getAttribute("content") : null;
+    if (vp && prevVp.indexOf("viewport-fit") === -1) vp.setAttribute("content", prevVp + ", viewport-fit=cover");
+    var theme = document.querySelector('meta[name="theme-color"]');
+    var createdTheme = false;
+    if (!theme) { theme = document.createElement("meta"); theme.setAttribute("name", "theme-color"); document.head.appendChild(theme); createdTheme = true; }
+    var prevTheme = theme.getAttribute("content");
+    theme.setAttribute("content", LOBBY_BG);
+    return function () {
+      html.style.background = prevHtmlBg;
+      body.style.background = prevBodyBg;
+      body.style.backgroundImage = prevBodyImg;
+      if (vp && prevVp != null) vp.setAttribute("content", prevVp);
+      if (createdTheme) theme.parentNode.removeChild(theme); else theme.setAttribute("content", prevTheme || "");
+    };
+  }, []);
 
   // 시계
   useEffect(function () {
